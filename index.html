@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tra cứu điểm LMS</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 90%; }
+        h2 { color: #1a73e8; margin-top: 0; }
+        input[type="text"] { width: calc(100% - 22px); padding: 12px 10px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; outline: none; }
+        input[type="text"]:focus { border-color: #1a73e8; }
+        button { background-color: #1a73e8; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
+        button:hover { background-color: #1557b0; }
+        #result { margin-top: 25px; text-align: left; display: none; }
+        .score-item { margin: 8px 0; padding: 12px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #1a73e8; }
+        .error { color: #d93025; margin-top: 15px; font-weight: bold; }
+        #loading { margin-top: 15px; color: #5f6368; display: none; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Tra cứu điểm Quiz, Lab, ASS</h2>
+    <input type="text" id="mssv" placeholder="Nhập Mã số sinh viên (VD: SV001)">
+    <button onclick="traCuu()">Tra cứu điểm</button>
+    
+    <div id="loading">Đang kết nối hệ thống...</div>
+    <div id="error" class="error"></div>
+    
+    <div id="result">
+        <h3 id="studentName" style="color: #202124;"></h3>
+        <div class="score-item"><strong>Điểm Quiz:</strong> <span id="diemQuiz"></span></div>
+        <div class="score-item"><strong>Điểm Lab:</strong> <span id="diemLab"></span></div>
+        <div class="score-item"><strong>Điểm ASS:</strong> <span id="diemAss"></span></div>
+    </div>
+</div>
+
+<script>
+    // QUAN TRỌNG: Xóa dòng chữ tiếng Việt và dán cái link API bạn copy ở Bước 2 vào giữa 2 dấu ngoặc kép bên dưới
+    const API_URL = "https://script.google.com/macros/s/AKfycbzRXbyQUjmFgA45G_M7sqAwjO4XzpUgl5KizkjBgEKwkTWHw6QO8bRMLzNLSVvk4zJH/exec";
+
+    function traCuu() {
+        const mssv = document.getElementById("mssv").value.trim();
+        const resultDiv = document.getElementById("result");
+        const errorDiv = document.getElementById("error");
+        const loadingDiv = document.getElementById("loading");
+
+        if (!mssv) {
+            errorDiv.innerText = "Vui lòng nhập Mã số sinh viên!";
+            resultDiv.style.display = "none";
+            return;
+        }
+
+        errorDiv.innerText = "";
+        resultDiv.style.display = "none";
+        loadingDiv.style.display = "block";
+
+        fetch(`${API_URL}?mssv=${mssv}`)
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.style.display = "none";
+                if (data.status === "success") {
+                    document.getElementById("studentName").innerText = "Sinh viên: " + data.data.name;
+                    document.getElementById("diemQuiz").innerText = data.data.quiz;
+                    document.getElementById("diemLab").innerText = data.data.lab;
+                    document.getElementById("diemAss").innerText = data.data.ass;
+                    resultDiv.style.display = "block";
+                } else {
+                    errorDiv.innerText = data.message; // Báo lỗi không tìm thấy
+                }
+            })
+            .catch(error => {
+                loadingDiv.style.display = "none";
+                errorDiv.innerText = "Lỗi kết nối! Vui lòng kiểm tra lại cấu hình link API.";
+            });
+    }
+</script>
+</body>
+</html>
