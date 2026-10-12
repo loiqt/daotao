@@ -43,13 +43,13 @@
         .note-area { display: flex; gap: 10px; align-items: center; padding: 12px 15px; background: #f8f9fa; }
         .note-area input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
         
-        .table-responsive { overflow-x: auto; margin-top: 20px; max-height: 600px; border: 1px solid var(--border-color); border-radius: 6px; }
+        .table-responsive { overflow-x: auto; margin-top: 15px; max-height: 600px; border: 1px solid var(--border-color); border-radius: 6px; }
         table.table-full { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; white-space: nowrap; }
         table.table-full th, table.table-full td { border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 10px 12px; }
         table.table-full th { background-color: #f8f9fa; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
         table.table-full th:nth-child(1), table.table-full td:nth-child(1) { position: sticky; left: 0; z-index: 11; background-color: #f8f9fa; box-shadow: inset -1px 0 0 var(--border-color); }
         
-        .drive-status { background: #e6f4ea; border: 1px solid #ceead6; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; margin-bottom: 25px; }
+        .drive-status { background: #e6f4ea; border: 1px solid #ceead6; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
         .file-card { border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 15px; }
         .tag { background: #f8f9fa; border: 1px solid #dadce0; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; margin: 4px; }
         .loading { text-align: center; padding: 40px; color: #5f6368; font-style: italic; }
@@ -87,7 +87,6 @@
                             <h4 style="margin-top:0; color:var(--primary);">🔍 THAM SỐ ĐỐI SOÁT</h4>
                             <div class="form-group">
                                 <label>Lọc theo Block lớp:</label>
-                                <!-- Cập nhật logic: Khi đổi Block thì GV và Môn sẽ đổi theo -->
                                 <select id="filter-block" onchange="updateFilters()">
                                     <option value="">-- Tất cả Block --</option>
                                     <option value="Block 1" selected>Block 1</option>
@@ -99,8 +98,8 @@
                                 <select id="filter-gv" onchange="updateFilters()"><option value="">-- Đang tải dữ liệu... --</option></select>
                             </div>
                             <div class="form-group">
-                                <label>Môn học đối chiếu:</label>
-                                <select id="filter-mon"><option value="">-- Đang tải dữ liệu... --</option></select>
+                                <label>Môn học đối chiếu (Không bắt buộc):</label>
+                                <select id="filter-mon"><option value="">-- Tất cả Môn học --</option></select>
                             </div>
                             <button class="btn-blue" style="width: 100%;" onclick="runDoiSoat()">🔍 Bắt đầu đối soát</button>
                         </div>
@@ -116,11 +115,18 @@
                 </div>
             </div>
             
+            <!-- TAB 2: DỮ LIỆU NGUỒN -->
             <div id="tab-dulieu" class="tab-content">
-                <button class="btn-blue" style="background:#34a853; margin-bottom:15px;" onclick="fetchSheetData()">🔄 Đồng bộ ngay từ LMS</button>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button class="btn-blue" style="background:#34a853;" onclick="fetchSheetData(false)">🔄 Đồng bộ ngay từ LMS</button>
+                    <button class="btn-blue" style="background:#1e2b3c;" onclick="changeSheetUrl()">⚙️ Đổi Link Google Sheet</button>
+                    <button class="btn-blue" style="background:#757575;" onclick="resetSheetUrl()">🔄 Khôi phục mặc định</button>
+                    <span id="current-sheet-tag" style="font-size: 12px; color: #5f6368; font-style: italic;"></span>
+                </div>
                 <div id="table-container" class="table-responsive"><div class="loading">Bấm đồng bộ để lấy dữ liệu.</div></div>
             </div>
 
+            <!-- TAB 3: GOOGLE DRIVE -->
             <div id="tab-drive" class="tab-content">
                 <div id="drive-status-container"></div>
                 <div id="drive-files-container"><div class="loading">Bấm mở Tab này hệ thống sẽ tự động quét Drive...</div></div>
@@ -132,16 +138,107 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbx_2KyLFX6E3MhYJ6OmwQdO5QEND5zAr8RCGMnBH-SD_x_Fa2mNIHt_ESQsH8fFW_F9/exec";
         let isDriveLoaded = false;
         let isSheetLoaded = false;
-        let globalLMSData = []; // Lưu toàn bộ data để lọc Dropdown
+        let globalLMSData = [];
+        let autoSyncTimer = null;
+        let isFetchingSheet = false;
+        let currentServerConfig = { sheetUrl: '', driveUrl: '', isSheetDefault: true, isDriveDefault: true };
+
+        function loadServerConfig(callback) {
+            fetch(`${API_URL}?action=getConfig`)
+                .then(res => res.json())
+                .then(res => {
+                    if(res.status === 'success') {
+                        currentServerConfig = res;
+                        updateTagInfos();
+                    }
+                    if(callback) callback();
+                });
+        }
+
+        function updateTagInfos() {
+            const sheetTag = document.getElementById('current-sheet-tag');
+            if(sheetTag) {
+                sheetTag.innerText = currentServerConfig.isSheetDefault 
+                    ? `(Đang dùng Google Sheet Mặc định)` 
+                    : `(Đang dùng Link Server tùy chỉnh: ...${currentServerConfig.sheetUrl.slice(-25)})`;
+            }
+        }
+
+        function changeSheetUrl() {
+            const newUrl = prompt("Nhập/Dán đường Link Google Sheet mới để ÁP DỤNG CHUNG CHO TẤT CẢ CÁC MÁY:", currentServerConfig.sheetUrl);
+            if (newUrl !== null && newUrl.trim() !== '') {
+                postConfig('updateSheetUrl', newUrl.trim(), () => {
+                    fetchSheetData(false);
+                });
+            }
+        }
+
+        function resetSheetUrl() {
+            if (confirm("Bạn có chắc chắn muốn khôi phục về Link Google Sheet MẶC ĐỊNH BAN ĐẦU cho tất cả các máy?")) {
+                postConfig('resetSheetUrl', '', () => {
+                    fetchSheetData(false);
+                });
+            }
+        }
+
+        function changeDriveUrl() {
+            const newUrl = prompt("Nhập/Dán đường Link/ID Thư mục Drive mới để ÁP DỤNG CHUNG CHO TẤT CẢ CÁC MÁY:", currentServerConfig.driveUrl);
+            if (newUrl !== null && newUrl.trim() !== '') {
+                postConfig('updateDriveUrl', newUrl.trim(), () => {
+                    isDriveLoaded = false;
+                    fetchDriveData();
+                });
+            }
+        }
+
+        function resetDriveUrl() {
+            if (confirm("Bạn có chắc chắn muốn khôi phục về Thư mục Google Drive MẶC ĐỊNH BAN ĐẦU cho tất cả các máy?")) {
+                postConfig('resetDriveUrl', '', () => {
+                    isDriveLoaded = false;
+                    fetchDriveData();
+                });
+            }
+        }
+
+        // FIX LỖI: Truyền action trực tiếp trên URL parameter
+        function postConfig(actionName, urlValue, onSuccess) {
+            fetch(`${API_URL}?action=${actionName}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `url=${encodeURIComponent(urlValue)}`
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === 'success') {
+                    alert("✓ " + res.message);
+                    loadServerConfig(onSuccess);
+                } else {
+                    alert("❌ Lỗi: " + res.message);
+                }
+            })
+            .catch(err => alert("❌ Lỗi kết nối: " + err.message));
+        }
 
         function openApp() { 
             document.getElementById('dashboard-view').style.display = 'none'; 
             document.getElementById('app-view').style.display = 'block'; 
-            fetchSheetData(); 
+            loadServerConfig(() => {
+                fetchSheetData(false); 
+            });
+            
+            if(!autoSyncTimer) {
+                autoSyncTimer = setInterval(() => {
+                    if (document.getElementById('tab-dulieu').classList.contains('active')) {
+                        fetchSheetData(true);
+                    }
+                }, 1500);
+            }
         }
+
         function backToDashboard() { 
             document.getElementById('app-view').style.display = 'none'; 
             document.getElementById('dashboard-view').style.display = 'block'; 
+            if(autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; }
         }
         
         function switchTab(evt, tabId) {
@@ -151,12 +248,9 @@
             evt.currentTarget.classList.add("active");
 
             if (tabId === 'tab-drive' && !isDriveLoaded) fetchDriveData();
-            if (tabId === 'tab-dulieu' && !isSheetLoaded) fetchSheetData();
+            if (tabId === 'tab-dulieu' && !isSheetLoaded) fetchSheetData(false);
         }
 
-        // ===============================================
-        // LOGIC LIÊN KẾT DROPDOWN (BLOCK -> GV -> MÔN)
-        // ===============================================
         function updateFilters() {
             if (globalLMSData.length === 0) return;
 
@@ -164,34 +258,25 @@
             const gvSelect = document.getElementById('filter-gv');
             const monSelect = document.getElementById('filter-mon');
             
-            // Giữ lại lựa chọn hiện tại nếu có
             const currentGV = gvSelect.value;
             const currentMon = monSelect.value;
 
             let filteredData = globalLMSData;
 
-            // 1. Lọc theo Block
-            if (selectedBlock) {
-                filteredData = filteredData.filter(row => row['Block'] === selectedBlock);
-            }
+            if (selectedBlock) filteredData = filteredData.filter(row => row['Block'] === selectedBlock);
 
-            // 2. Đổ danh sách GV (chỉ của Block đã chọn)
             const gvSet = new Set();
             filteredData.forEach(row => { if(row['Giảng viên']) gvSet.add(row['Giảng viên'].trim()); });
             
-            gvSelect.innerHTML = '<option value="">-- Tất cả Giảng viên --</option>';
+            gvSelect.innerHTML = '<option value="">-- Chọn Giảng viên --</option>';
             [...gvSet].sort().forEach(gv => {
                 let selected = (gv === currentGV) ? 'selected' : '';
                 gvSelect.innerHTML += `<option value="${gv}" ${selected}>${gv}</option>`;
             });
 
-            // 3. Lọc tiếp theo GV (để lấy danh sách Môn)
             const newSelectedGV = gvSelect.value;
-            if (newSelectedGV) {
-                filteredData = filteredData.filter(row => row['Giảng viên'] === newSelectedGV);
-            }
+            if (newSelectedGV) filteredData = filteredData.filter(row => row['Giảng viên'] === newSelectedGV);
 
-            // 4. Đổ danh sách Môn học (thuộc GV và Block đã chọn)
             const monSet = new Set();
             filteredData.forEach(row => { if(row['Mã môn']) monSet.add(row['Mã môn'].trim()); });
 
@@ -209,16 +294,17 @@
             const block = document.getElementById('filter-block').value;
             const container = document.getElementById('result-container');
 
-            if(!mon) return alert("Vui lòng chọn Môn học để đối soát!");
-            container.innerHTML = '<div class="loading">⏳ Đang đọc dữ liệu từ LMS và phân tích Drive...</div>';
+            if(!gv) return alert("Vui lòng chọn Giảng viên phụ trách để tiến hành đối soát!");
+
+            container.innerHTML = '<div class="loading">⏳ Đang đọc dữ liệu từ LMS và quét toàn bộ file trên Drive. Vui lòng đợi...</div>';
             
             fetch(`${API_URL}?action=doisoat&giangVien=${encodeURIComponent(gv)}&monHoc=${encodeURIComponent(mon)}&block=${encodeURIComponent(block)}`)
                 .then(res => res.json())
                 .then(result => {
                     if(result.status === 'success') renderResult(result.data);
-                    else container.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi: ${result.message}</div>`;
+                    else container.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi Backend: ${result.message}</div>`;
                 })
-                .catch(err => container.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi mạng: ${err.message}</div>`);
+                .catch(err => container.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi kết nối mạng: ${err.message}</div>`);
         }
 
         function renderResult(data) {
@@ -227,7 +313,7 @@
             const container = document.getElementById('result-container');
 
             if(data.classes.length === 0) {
-                container.innerHTML = '<div class="loading" style="color:#1e8e3e; font-weight:bold;">✅ Không có lớp nào chênh lệch điểm (Hoặc trống)!</div>';
+                container.innerHTML = '<div class="loading" style="color:#1e8e3e; font-weight:bold;">✅ Không có lớp nào bị chênh lệch điểm!</div>';
                 return;
             }
 
@@ -235,7 +321,6 @@
             data.classes.forEach(cls => {
                 let tableRows = '';
                 cls.details.forEach(item => {
-                    // ĐÃ ẨN: Chỉ hiển thị các đầu điểm bị LỆCH
                     if (!item.isDiff) return; 
 
                     tableRows += `
@@ -253,12 +338,12 @@
                         <div class="result-box">
                             <div class="result-header">🏢 LỚP: ${cls.lop} &nbsp;|&nbsp; 📚 MÔN: ${cls.monHoc} &nbsp;|&nbsp; 👨‍🏫 GV: ${cls.giangVien}</div>
                             <table class="table-ds">
-                                <thead><tr><th style="text-align:left;">Đầu điểm bị lệch</th><th>Excel Drive</th><th>Google Sheet</th><th>Đánh giá</th></tr></thead>
+                                <thead><tr><th style="text-align:left;">Đầu điểm bị lệch</th><th>Excel Drive</th><th>Google Sheet (LMS)</th><th>Đánh giá</th></tr></thead>
                                 <tbody>${tableRows}</tbody>
                             </table>
                             <div class="note-area">
                                 <span style="font-weight:bold; color:#1e8e3e; font-size:13px;">Ghi chú Cột V:</span>
-                                <input type="text" id="note-input-${cls.rowIndex}" value="${cls.currentNote}">
+                                <input type="text" id="note-input-${cls.rowIndex}" value="${cls.currentNote}" placeholder="Nhập lý do...">
                                 <button class="btn-blue" style="background:#1e2b3c;" onclick="saveNote(${cls.rowIndex}, this)">💾 Lưu</button>
                             </div>
                         </div>
@@ -268,14 +353,15 @@
             container.innerHTML = html;
         }
 
+        // FIX LỖI: Truyền action=saveNote trực tiếp trên URL
         function saveNote(rowIndex, btnElement) {
             const noteContent = document.getElementById('note-input-' + rowIndex).value.trim();
             btnElement.innerText = "⏳..."; btnElement.disabled = true;
 
-            fetch(API_URL, {
+            fetch(`${API_URL}?action=saveNote`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=saveNote&rowIndex=${rowIndex}&note=${encodeURIComponent(noteContent)}`
+                body: `rowIndex=${rowIndex}&note=${encodeURIComponent(noteContent)}`
             })
             .then(res => res.json())
             .then(result => {
@@ -289,19 +375,25 @@
         }
 
         // --- TAB 2: ĐỌC LMS ---
-        function fetchSheetData() {
+        function fetchSheetData(isSilent) {
+            if (isFetchingSheet && isSilent) return; 
+            isFetchingSheet = true;
+
             const container = document.getElementById('table-container');
-            container.innerHTML = '<div class="loading">⏳ Đang tải dữ liệu từ LMS...</div>';
+            if (!isSilent) container.innerHTML = '<div class="loading">⏳ Đang tải dữ liệu từ LMS...</div>';
             
-            fetch(API_URL + "?action=getLMSData")
+            fetch(`${API_URL}?action=getLMSData`)
                 .then(res => res.json())
                 .then(result => {
                     if(result.status === 'success') {
                         isSheetLoaded = true;
-                        globalLMSData = result.data; // LƯU VÀO BIẾN TOÀN CỤC
-                        updateFilters(); // GỌI HÀM LỌC ĐỂ ĐỔ DỮ LIỆU VÀO DROPDOWN
+                        globalLMSData = result.data; 
+                        updateFilters(); 
                         
-                        if(globalLMSData.length === 0) return container.innerHTML = '<div class="loading">Sheet trống!</div>';
+                        if(globalLMSData.length === 0) {
+                            container.innerHTML = '<div class="loading">Sheet trống!</div>';
+                            return;
+                        }
                         const headers = Object.keys(globalLMSData[0]).filter(k => k !== 'rowIndex');
                         let html = '<table class="table-full"><thead><tr>';
                         headers.forEach(h => html += `<th>${h}</th>`);
@@ -314,6 +406,9 @@
                         html += '</tbody></table>';
                         container.innerHTML = html;
                     }
+                })
+                .finally(() => {
+                    isFetchingSheet = false; 
                 });
         }
 
@@ -321,23 +416,45 @@
         function fetchDriveData() {
             const statusContainer = document.getElementById('drive-status-container');
             const filesContainer = document.getElementById('drive-files-container');
-            filesContainer.innerHTML = '<div class="loading">⏳ Đang phân tích file Excel...</div>';
+            filesContainer.innerHTML = '<div class="loading">⏳ Đang kết nối và phân tích file Excel trên Drive...</div>';
             
-            fetch(API_URL + "?action=getDriveData")
+            fetch(`${API_URL}?action=getDriveData`)
                 .then(res => res.json())
                 .then(result => {
                     if(result.status === 'success') {
                         isDriveLoaded = true; 
-                        statusContainer.innerHTML = `<div class="drive-status"><div style="display:flex; align-items:center; gap:10px;"><div style="background:#34a853; color:white; padding:10px; border-radius:50%;">✓</div><div><b>Kết nối thành công</b><br><small>Thư mục: ${result.folder_id}</small></div></div><a href="https://drive.google.com/drive/folders/${result.folder_id}" target="_blank" class="btn-blue" style="background:white; color:var(--primary); border:1px solid var(--primary); text-decoration:none;">Mở thư mục ↗</a></div>`;
-                        if (result.data.length === 0) return filesContainer.innerHTML = '<div class="loading">Không có file Excel nào.</div>';
+                        const driveTagText = currentServerConfig.isDriveDefault ? `(Đang dùng Mặc định)` : `(Đang dùng Link Server tùy chỉnh)`;
+                        
+                        statusContainer.innerHTML = `
+                            <div class="drive-status">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <div style="background:#34a853; color:white; padding:10px; border-radius:50%; font-weight:bold;">✓</div>
+                                    <div>
+                                        <b>Kết nối thành công tới Google Drive</b> ${driveTagText}<br>
+                                        <small>ID Thư mục: ${result.folder_id}</small>
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                    <button class="btn-blue" style="background:#1e2b3c;" onclick="changeDriveUrl()">⚙️ Đổi Link Thư mục Drive</button>
+                                    <button class="btn-blue" style="background:#757575;" onclick="resetDriveUrl()">🔄 Khôi phục mặc định</button>
+                                    <a href="https://drive.google.com/drive/folders/${result.folder_id}" target="_blank" class="btn-blue" style="background:white; color:var(--primary); border:1px solid var(--primary); text-decoration:none;">Mở thư mục ↗</a>
+                                </div>
+                            </div>
+                        `;
+                        if (result.data.length === 0) return filesContainer.innerHTML = '<div class="loading">Không tìm thấy file Excel nào trong thư mục này.</div>';
                         
                         let html = '';
                         result.data.forEach(file => {
                             let tags = file.sheets.map(s => `<div class="tag">${s}</div>`).join('');
-                            html += `<div class="file-card"><h3 style="margin-top:0;">📊 ${file.name}</h3><small>MIME: ${file.mimeType}</small><div style="margin-top:15px;"><b>SHEETS:</b><br>${tags}</div></div>`;
+                            html += `<div class="file-card"><h3 style="margin-top:0;">📊 ${file.name}</h3><small>MIME: ${file.mimeType}</small><div style="margin-top:15px;"><b>SHEETS MÔN HỌC ĐƯỢC NẠP (${file.sheets.length}):</b><br>${tags}</div></div>`;
                         });
                         filesContainer.innerHTML = html;
+                    } else {
+                        filesContainer.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi Backend: ${result.message}</div>`;
                     }
+                })
+                .catch(err => {
+                    filesContainer.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi kết nối: ${err.message}</div>`;
                 });
         }
     </script>
