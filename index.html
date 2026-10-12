@@ -4,18 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ thống Tiện ích Tự động - Ban Đào tạo</title>
+    <!-- THƯ VIỆN XÁC THỰC GOOGLE CHÍNH CHỦ -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        :root { --primary: #1a73e8; --bg-color: #f0f2f5; --text-dark: #202124; --border-color: #dadce0; --warning: #f9ab00; --success: #34a853;}
+        :root { --primary: #1a73e8; --bg-color: #f0f2f5; --text-dark: #202124; --border-color: #dadce0; --warning: #f9ab00; --success: #34a853; --danger: #ea4335;}
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-dark); }
         .header { background-color: #1e2b3c; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .logo { font-weight: bold; font-size: 18px; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
         .user-badge { background: #fbbc04; color: #000; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+        .btn-logout { background: #ea4335; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .btn-header-action { background: #1a73e8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; display: none; }
+        .btn-header-action:hover { background: #1557b0; }
         .container { max-width: 98%; margin: 20px auto; padding: 0 15px; }
         
-        #app-view { display: none; }
+        #login-view { max-width: 420px; margin: 60px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        #login-view h3 { margin-top: 0; text-align: center; color: #1e2b3c; }
+
+        .google-btn-wrapper { display: flex; justify-content: center; margin-bottom: 15px; }
+
+        #app-view, #users-view { display: none; }
         .nav-back { display: inline-block; margin-bottom: 20px; color: var(--primary); cursor: pointer; font-weight: bold; }
         .tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; background: white; border-radius: 10px 10px 0 0; padding: 10px 20px 0; }
-        .tab-btn { background: none; border: none; padding: 15px 20px; font-size: 15px; cursor: pointer; color: #5f6368; font-weight: bold; border-bottom: 3px solid transparent; }
+        .tab-btn { background: none; border: none; padding: 15px 20px; font-size: 15px; cursor: pointer; color: #5f6368; font-weight: bold; border-bottom: 3px solid transparent; display: none; }
         .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
         .tab-content { display: none; background: white; padding: 20px; border-radius: 0 0 10px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 400px;}
         .tab-content.active { display: block; }
@@ -27,7 +38,7 @@
         .filter-box { border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; background: #f8f9fa; margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; }
-        .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .form-group select, .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         
         .stats-grid { display: flex; gap: 15px; margin-bottom: 20px; }
         .stat-card { flex: 1; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; text-align: center; }
@@ -53,34 +64,90 @@
         .file-card { border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 15px; }
         .tag { background: #f8f9fa; border: 1px solid #dadce0; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; margin: 4px; }
         .loading { text-align: center; padding: 40px; color: #5f6368; font-style: italic; }
+
+        .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; max-width: 500px; margin: 50px auto; padding: 25px; border-radius: 8px; position: relative; }
+        .close-modal { position: absolute; right: 15px; top: 15px; font-size: 20px; cursor: pointer; }
+        .perm-checkboxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px; }
+        .perm-checkboxes label { font-weight: normal; font-size: 12px; }
+        .divider { display: flex; align-items: center; text-align: center; margin: 20px 0; color: #888; font-size: 12px; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #dadce0; }
+        .divider::before { margin-right: .5em; }
+        .divider::after { margin-left: .5em; }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="logo">🎓 HỆ THỐNG TIỆN ÍCH - BAN ĐÀO TẠO</div>
-        <div class="header-right"><span class="user-badge">ADMIN</span></div>
+        <div class="user-info" id="user-info-bar" style="display: none;">
+            <!-- NÚT NẰM Ở VỊ TRÍ KHUNG MÀU ĐỎ TRÊN HEADER -->
+            <button class="btn-header-action" id="btn-header-users" onclick="openUsersApp()">👥 Quản lý tài khoản</button>
+            <span id="user-display-name" style="font-size: 13px; font-weight: bold;"></span>
+            <span class="user-badge" id="user-display-role">ADMIN</span>
+            <button class="btn-logout" onclick="logout()">Đăng xuất</button>
+        </div>
     </div>
 
     <div class="container">
-        <!-- Dashboard -->
-        <div id="dashboard-view" style="display: block;">
-            <h2>Danh mục Tiện ích</h2>
-            <button class="btn-blue" style="width: 300px; height: 50px;" onclick="openApp()">Check SV Lab & Assignment →</button>
+        <!-- FORM ĐĂNG NHẬP -->
+        <div id="login-view">
+            <h3>🔐 ĐĂNG NHẬP HỆ THỐNG</h3>
+            
+            <!-- NÚT GOOGLE SIGN-IN CHÍNH CHỦ GOOGLE -->
+            <div class="google-btn-wrapper">
+                <div id="g_id_onload"
+                     data-client_id="557743435234-sjci6v0ognhadh0ukpca95t7njp3u68b.apps.googleusercontent.com"
+                     data-callback="handleGoogleSignIn"
+                     data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin"
+                     data-type="standard"
+                     data-size="large"
+                     data-theme="outline"
+                     data-text="sign_in_with"
+                     data-shape="rectangular"
+                     data-logo_alignment="left"
+                     data-width="360">
+                </div>
+            </div>
+            
+            <div class="divider">HOẶC DÙNG TÀI KHOẢN MẬT KHẨU</div>
+
+            <div class="form-group">
+                <label>Tên đăng nhập hoặc Email:</label>
+                <input type="text" id="login-username" placeholder="Ví dụ: loiqt@fpt.edu.vn hoặc admin">
+            </div>
+            <div class="form-group">
+                <label>Mật khẩu:</label>
+                <input type="password" id="login-password" placeholder="Nhập mật khẩu...">
+            </div>
+            <button class="btn-blue" style="width: 100%; height: 40px;" onclick="login()">Đăng nhập bằng Mật khẩu</button>
+            <div id="login-msg" style="margin-top: 15px; color: red; font-size: 13px; text-align: center;"></div>
         </div>
 
-        <!-- App View -->
+        <!-- DASHBOARD -->
+        <div id="dashboard-view" style="display: none;">
+            <h2>Danh mục Tiện ích</h2>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <button class="btn-blue" style="width: 280px; height: 70px; font-size: 15px;" onclick="openApp()">
+                    📊 Check SV Lab & Assignment →
+                </button>
+            </div>
+        </div>
+
+        <!-- APP 1: CHECK SV LAB & ASSIGNMENT -->
         <div id="app-view">
             <div class="nav-back" onclick="backToDashboard()">← Quay lại Dashboard</div>
             <h2 style="margin-top:0;">Đối soát & Giám sát tiến độ Lab / Assignment</h2>
             
             <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab(event, 'tab-doisoat')">📊 Đối soát điểm</button>
-                <button class="tab-btn" onclick="switchTab(event, 'tab-dulieu')">📄 Dữ liệu nguồn</button>
-                <button class="tab-btn" onclick="switchTab(event, 'tab-drive')">☁️ Google Drive</button>
+                <button class="tab-btn" id="btn-tab-doisoat" onclick="switchTab(event, 'tab-doisoat')">📊 Đối soát điểm</button>
+                <button class="tab-btn" id="btn-tab-dulieu" onclick="switchTab(event, 'tab-dulieu')">📄 Dữ liệu nguồn</button>
+                <button class="tab-btn" id="btn-tab-drive" onclick="switchTab(event, 'tab-drive')">☁️ Google Drive</button>
             </div>
 
             <!-- TAB 1: ĐỐI SOÁT -->
-            <div id="tab-doisoat" class="tab-content active">
+            <div id="tab-doisoat" class="tab-content">
                 <div class="ds-layout">
                     <div class="ds-left">
                         <div class="filter-box">
@@ -119,8 +186,8 @@
             <div id="tab-dulieu" class="tab-content">
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <button class="btn-blue" style="background:#34a853;" onclick="fetchSheetData(false)">🔄 Đồng bộ ngay từ LMS</button>
-                    <button class="btn-blue" style="background:#1e2b3c;" onclick="changeSheetUrl()">⚙️ Đổi Link Google Sheet</button>
-                    <button class="btn-blue" style="background:#757575;" onclick="resetSheetUrl()">🔄 Khôi phục mặc định</button>
+                    <button class="btn-blue config-elem" style="background:#1e2b3c;" onclick="changeSheetUrl()">⚙️ Đổi Link Google Sheet</button>
+                    <button class="btn-blue config-elem" style="background:#757575;" onclick="resetSheetUrl()">🔄 Khôi phục mặc định</button>
                     <span id="current-sheet-tag" style="font-size: 12px; color: #5f6368; font-style: italic;"></span>
                 </div>
                 <div id="table-container" class="table-responsive"><div class="loading">Bấm đồng bộ để lấy dữ liệu.</div></div>
@@ -132,16 +199,244 @@
                 <div id="drive-files-container"><div class="loading">Bấm mở Tab này hệ thống sẽ tự động quét Drive...</div></div>
             </div>
         </div>
+
+        <!-- APP 2: MÀN HÌNH QUẢN LÝ TÀI KHOẢN ĐỘC LẬP -->
+        <div id="users-view">
+            <div class="nav-back" onclick="backToDashboard()">← Quay lại Dashboard</div>
+            <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">👥 Quản lý tài khoản & Phân quyền Hệ thống</h2>
+                    <button class="btn-blue" onclick="openUserModal()">➕ Thêm tài khoản / Email mới</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table-full" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Email / Username</th>
+                                <th>Họ và tên</th>
+                                <th>Vai trò</th>
+                                <th>Quyền truy cập</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                            <tr><td colspan="7" class="loading">Đang tải danh sách tài khoản...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL THÊM / SỬA USER -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeUserModal()">&times;</span>
+            <h3 id="modal-title" style="margin-top:0;">Tài khoản</h3>
+            <input type="hidden" id="user-row-index" value="0">
+            <div class="form-group">
+                <label>Email / Tên đăng nhập:</label>
+                <input type="text" id="user-username" placeholder="Nhập Email Google (vd: loiqt@fpt.edu.vn)...">
+            </div>
+            <div class="form-group">
+                <label>Mật khẩu (Để trống nếu dùng Đăng nhập Email):</label>
+                <input type="password" id="user-password" placeholder="Mật khẩu...">
+            </div>
+            <div class="form-group">
+                <label>Họ và tên:</label>
+                <input type="text" id="user-fullname" placeholder="Nhập họ tên...">
+            </div>
+            <div class="form-group">
+                <label>Chức vụ / Vai trò:</label>
+                <select id="user-role">
+                    <option value="GiangVien">Giảng viên</option>
+                    <option value="Admin">Admin (Quản trị)</option>
+                    <option value="Khach">Khách (Chỉ xem)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Phân quyền chức năng:</label>
+                <div class="perm-checkboxes">
+                    <label><input type="checkbox" value="doisoat" class="chk-perm"> 📊 Xem Đối soát</label>
+                    <label><input type="checkbox" value="dulieu" class="chk-perm"> 📄 Xem Dữ liệu LMS</label>
+                    <label><input type="checkbox" value="drive" class="chk-perm"> ☁️ Xem Google Drive</label>
+                    <label><input type="checkbox" value="config" class="chk-perm"> ⚙️ Cấu hình Link</label>
+                    <label><input type="checkbox" value="usermgmt" class="chk-perm"> 👥 Quản lý User</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Trạng thái:</label>
+                <select id="user-status">
+                    <option value="Active">Kích hoạt (Active)</option>
+                    <option value="Blocked">Tạm khóa (Blocked)</option>
+                </select>
+            </div>
+            <button class="btn-blue" style="width:100%; margin-top:10px;" onclick="saveUserSubmit()">💾 Lưu thông tin</button>
+        </div>
     </div>
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbx_2KyLFX6E3MhYJ6OmwQdO5QEND5zAr8RCGMnBH-SD_x_Fa2mNIHt_ESQsH8fFW_F9/exec";
+        let currentUser = null;
         let isDriveLoaded = false;
         let isSheetLoaded = false;
         let globalLMSData = [];
         let autoSyncTimer = null;
         let isFetchingSheet = false;
         let currentServerConfig = { sheetUrl: '', driveUrl: '', isSheetDefault: true, isDriveDefault: true };
+
+        window.onload = function() {
+            const savedUser = sessionStorage.getItem('loggedUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showAppUI();
+            }
+        };
+
+        // HÀM GIẢI MÃ JWT TOKEN TỪ GOOGLE ĐỂ LẤY EMAIL CHÍNH CHỦ (1-CLICK)
+        function handleGoogleSignIn(response) {
+            const msg = document.getElementById('login-msg');
+            msg.innerText = "⏳ Đang xác thực tài khoản Google...";
+
+            try {
+                // Giải mã token gửi về từ Google Sign-In
+                const base64Url = response.credential.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                const payload = JSON.parse(jsonPayload);
+                
+                const userEmail = payload.email; // Email Google chính chủ của người dùng
+
+                // Gửi Email về Apps Script để kiểm tra quyền và cấp session
+                fetch(`${API_URL}?action=loginByEmail`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `email=${encodeURIComponent(userEmail)}`
+                })
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        currentUser = res.user;
+                        sessionStorage.setItem('loggedUser', JSON.stringify(currentUser));
+                        msg.innerText = "";
+                        showAppUI();
+                    } else {
+                        msg.innerText = res.message;
+                    }
+                })
+                .catch(err => msg.innerText = "Lỗi kết nối: " + err.message);
+
+            } catch (e) {
+                msg.innerText = "Không thể giải mã dữ liệu xác thực Google!";
+            }
+        }
+
+        function login() {
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            const msg = document.getElementById('login-msg');
+
+            if (!u || !p) return msg.innerText = "Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu!";
+            msg.innerText = "⏳ Đang xác thực...";
+
+            fetch(`${API_URL}?action=login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    currentUser = res.user;
+                    sessionStorage.setItem('loggedUser', JSON.stringify(currentUser));
+                    msg.innerText = "";
+                    showAppUI();
+                } else {
+                    msg.innerText = res.message;
+                }
+            })
+            .catch(err => msg.innerText = "Lỗi kết nối mạng: " + err.message);
+        }
+
+        function logout() {
+            sessionStorage.removeItem('loggedUser');
+            currentUser = null;
+            location.reload();
+        }
+
+        function hasPerm(permKey) {
+            if (!currentUser || !currentUser.permissions) return false;
+            return currentUser.permissions.includes(permKey) || currentUser.role === 'Admin';
+        }
+
+        function showAppUI() {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('dashboard-view').style.display = 'block';
+            document.getElementById('user-info-bar').style.display = 'flex';
+            document.getElementById('user-display-name').innerText = currentUser.fullname + " (" + currentUser.username + ")";
+            document.getElementById('user-display-role').innerText = currentUser.role.toUpperCase();
+
+            document.getElementById('btn-header-users').style.display = hasPerm('usermgmt') ? 'inline-block' : 'none';
+
+            document.getElementById('btn-tab-doisoat').style.display = hasPerm('doisoat') ? 'inline-block' : 'none';
+            document.getElementById('btn-tab-dulieu').style.display = hasPerm('dulieu') ? 'inline-block' : 'none';
+            document.getElementById('btn-tab-drive').style.display = hasPerm('drive') ? 'inline-block' : 'none';
+
+            document.querySelectorAll('.config-elem').forEach(el => {
+                el.style.display = hasPerm('config') ? 'inline-block' : 'none';
+            });
+        }
+
+        function openApp() { 
+            document.getElementById('dashboard-view').style.display = 'none'; 
+            document.getElementById('users-view').style.display = 'none';
+            document.getElementById('app-view').style.display = 'block'; 
+            
+            if (hasPerm('doisoat')) switchTabDirect('tab-doisoat', 'btn-tab-doisoat');
+            else if (hasPerm('dulieu')) switchTabDirect('tab-dulieu', 'btn-tab-dulieu');
+            else if (hasPerm('drive')) switchTabDirect('tab-drive', 'btn-tab-drive');
+
+            loadServerConfig(() => { if (hasPerm('dulieu')) fetchSheetData(false); });
+            
+            if(!autoSyncTimer) {
+                autoSyncTimer = setInterval(() => {
+                    if (document.getElementById('tab-dulieu').classList.contains('active') && hasPerm('dulieu')) {
+                        fetchSheetData(true);
+                    }
+                }, 1500);
+            }
+        }
+
+        function openUsersApp() {
+            document.getElementById('dashboard-view').style.display = 'none';
+            document.getElementById('app-view').style.display = 'none';
+            document.getElementById('users-view').style.display = 'block';
+            fetchUsersList();
+        }
+
+        function backToDashboard() { 
+            document.getElementById('app-view').style.display = 'none'; 
+            document.getElementById('users-view').style.display = 'none'; 
+            document.getElementById('dashboard-view').style.display = 'block'; 
+            if(autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; }
+        }
+        
+        function switchTab(evt, tabId) { switchTabDirect(tabId, evt.currentTarget.id); }
+
+        function switchTabDirect(tabId, btnId) {
+            document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+            document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+            
+            const targetTab = document.getElementById(tabId);
+            const targetBtn = document.getElementById(btnId);
+            if(targetTab) targetTab.classList.add("active");
+            if(targetBtn) targetBtn.classList.add("active");
+
+            if (tabId === 'tab-drive' && !isDriveLoaded) fetchDriveData();
+            if (tabId === 'tab-dulieu' && !isSheetLoaded) fetchSheetData(false);
+        }
 
         function loadServerConfig(callback) {
             fetch(`${API_URL}?action=getConfig`)
@@ -164,43 +459,135 @@
             }
         }
 
-        function changeSheetUrl() {
-            const newUrl = prompt("Nhập/Dán đường Link Google Sheet mới để ÁP DỤNG CHUNG CHO TẤT CẢ CÁC MÁY:", currentServerConfig.sheetUrl);
-            if (newUrl !== null && newUrl.trim() !== '') {
-                postConfig('updateSheetUrl', newUrl.trim(), () => {
-                    fetchSheetData(false);
+        function fetchUsersList() {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '<tr><td colspan="7" class="loading">Đang tải danh sách tài khoản...</td></tr>';
+            
+            fetch(`${API_URL}?action=getUsers`)
+                .then(res => res.json())
+                .then(res => {
+                    if(res.status === 'success') {
+                        let html = '';
+                        res.data.forEach((u, idx) => {
+                            html += `
+                                <tr>
+                                    <td>${idx + 1}</td>
+                                    <td><b>${u.username}</b></td>
+                                    <td>${u.fullname}</td>
+                                    <td><span class="tag">${u.role}</span></td>
+                                    <td><small>${u.permissions}</small></td>
+                                    <td><span style="color:${u.status === 'Active' ? 'green':'red'}; font-weight:bold;">${u.status}</span></td>
+                                    <td>
+                                        <button class="btn-blue" style="padding:4px 8px; font-size:11px;" onclick="editUser(${u.rowIndex}, '${u.username}', '${u.fullname}', '${u.role}', '${u.permissions}', '${u.status}')">✏️ Sửa</button>
+                                        ${u.username !== 'admin' ? `<button class="btn-blue" style="background:#ea4335; padding:4px 8px; font-size:11px;" onclick="deleteUserSubmit(\${u.rowIndex})">🗑️ Xóa</button>` : ''}
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        tbody.innerHTML = html;
+                    }
+                });
+        }
+
+        function openUserModal() {
+            document.getElementById('modal-title').innerText = "➕ Thêm tài khoản / Email mới";
+            document.getElementById('user-row-index').value = "0";
+            document.getElementById('user-username').value = "";
+            document.getElementById('user-username').disabled = false;
+            document.getElementById('user-password').value = "";
+            document.getElementById('user-fullname').value = "";
+            document.getElementById('user-role').value = "GiangVien";
+            document.getElementById('user-status').value = "Active";
+            document.querySelectorAll('.chk-perm').forEach(c => c.checked = false);
+            document.getElementById('userModal').style.display = 'block';
+        }
+
+        function editUser(rowIndex, username, fullname, role, perms, status) {
+            document.getElementById('modal-title').innerText = "✏️ Sửa tài khoản";
+            document.getElementById('user-row-index').value = rowIndex;
+            document.getElementById('user-username').value = username;
+            document.getElementById('user-username').disabled = true;
+            document.getElementById('user-password').value = "";
+            document.getElementById('user-fullname').value = fullname;
+            document.getElementById('user-role').value = role;
+            document.getElementById('user-status').value = status;
+            
+            const permArr = perms.split(',');
+            document.querySelectorAll('.chk-perm').forEach(c => {
+                c.checked = permArr.includes(c.value);
+            });
+            document.getElementById('userModal').style.display = 'block';
+        }
+
+        function closeUserModal() { document.getElementById('userModal').style.display = 'none'; }
+
+        function saveUserSubmit() {
+            const rowIndex = document.getElementById('user-row-index').value;
+            const username = document.getElementById('user-username').value.trim();
+            const password = document.getElementById('user-password').value.trim();
+            const fullname = document.getElementById('user-fullname').value.trim();
+            const role = document.getElementById('user-role').value;
+            const status = document.getElementById('user-status').value;
+            
+            const selectedPerms = [];
+            document.querySelectorAll('.chk-perm:checked').forEach(c => selectedPerms.push(c.value));
+
+            if (!username || !fullname) return alert("Vui lòng điền Email/Username và Họ tên!");
+
+            fetch(`${API_URL}?action=saveUser`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `rowIndex=${rowIndex}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&fullname=${encodeURIComponent(fullname)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(status)}&permissions=${encodeURIComponent(selectedPerms.join(','))}`
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === 'success') {
+                    alert("✓ " + res.message);
+                    closeUserModal();
+                    fetchUsersList();
+                } else alert("❌ Lỗi: " + res.message);
+            });
+        }
+
+        function deleteUserSubmit(rowIndex) {
+            if (confirm("Bạn có chắc chắn muốn xóa tài khoản này?")) {
+                fetch(`${API_URL}?action=deleteUser`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `rowIndex=${rowIndex}`
+                })
+                .then(res => res.json())
+                .then(res => {
+                    if(res.status === 'success') {
+                        alert("✓ " + res.message);
+                        fetchUsersList();
+                    } else alert("❌ Lỗi: " + res.message);
                 });
             }
+        }
+
+        function changeSheetUrl() {
+            if(!hasPerm('config')) return alert("Bạn không có quyền thay đổi Cấu hình hệ thống!");
+            const newUrl = prompt("Nhập Link Google Sheet mới:", currentServerConfig.sheetUrl);
+            if (newUrl !== null && newUrl.trim() !== '') postConfig('updateSheetUrl', newUrl.trim(), () => fetchSheetData(false));
         }
 
         function resetSheetUrl() {
-            if (confirm("Bạn có chắc chắn muốn khôi phục về Link Google Sheet MẶC ĐỊNH BAN ĐẦU cho tất cả các máy?")) {
-                postConfig('resetSheetUrl', '', () => {
-                    fetchSheetData(false);
-                });
-            }
+            if(!hasPerm('config')) return alert("Bạn không có quyền thay đổi Cấu hình hệ thống!");
+            if (confirm("Khôi phục Link MẶC ĐỊNH?")) postConfig('resetSheetUrl', '', () => fetchSheetData(false));
         }
 
         function changeDriveUrl() {
-            const newUrl = prompt("Nhập/Dán đường Link/ID Thư mục Drive mới để ÁP DỤNG CHUNG CHO TẤT CẢ CÁC MÁY:", currentServerConfig.driveUrl);
-            if (newUrl !== null && newUrl.trim() !== '') {
-                postConfig('updateDriveUrl', newUrl.trim(), () => {
-                    isDriveLoaded = false;
-                    fetchDriveData();
-                });
-            }
+            if(!hasPerm('config')) return alert("Bạn không có quyền thay đổi Cấu hình hệ thống!");
+            const newUrl = prompt("Nhập Link/ID Drive mới:", currentServerConfig.driveUrl);
+            if (newUrl !== null && newUrl.trim() !== '') postConfig('updateDriveUrl', newUrl.trim(), () => { isDriveLoaded = false; fetchDriveData(); });
         }
 
         function resetDriveUrl() {
-            if (confirm("Bạn có chắc chắn muốn khôi phục về Thư mục Google Drive MẶC ĐỊNH BAN ĐẦU cho tất cả các máy?")) {
-                postConfig('resetDriveUrl', '', () => {
-                    isDriveLoaded = false;
-                    fetchDriveData();
-                });
-            }
+            if(!hasPerm('config')) return alert("Bạn không có quyền thay đổi Cấu hình hệ thống!");
+            if (confirm("Khôi phục Thư mục Drive MẶC ĐỊNH?")) postConfig('resetDriveUrl', '', () => { isDriveLoaded = false; fetchDriveData(); });
         }
 
-        // FIX LỖI: Truyền action trực tiếp trên URL parameter
         function postConfig(actionName, urlValue, onSuccess) {
             fetch(`${API_URL}?action=${actionName}`, {
                 method: 'POST',
@@ -212,55 +599,18 @@
                 if(res.status === 'success') {
                     alert("✓ " + res.message);
                     loadServerConfig(onSuccess);
-                } else {
-                    alert("❌ Lỗi: " + res.message);
-                }
-            })
-            .catch(err => alert("❌ Lỗi kết nối: " + err.message));
-        }
-
-        function openApp() { 
-            document.getElementById('dashboard-view').style.display = 'none'; 
-            document.getElementById('app-view').style.display = 'block'; 
-            loadServerConfig(() => {
-                fetchSheetData(false); 
+                } else alert("❌ Lỗi: " + res.message);
             });
-            
-            if(!autoSyncTimer) {
-                autoSyncTimer = setInterval(() => {
-                    if (document.getElementById('tab-dulieu').classList.contains('active')) {
-                        fetchSheetData(true);
-                    }
-                }, 1500);
-            }
-        }
-
-        function backToDashboard() { 
-            document.getElementById('app-view').style.display = 'none'; 
-            document.getElementById('dashboard-view').style.display = 'block'; 
-            if(autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; }
-        }
-        
-        function switchTab(evt, tabId) {
-            document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
-            document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
-            document.getElementById(tabId).classList.add("active");
-            evt.currentTarget.classList.add("active");
-
-            if (tabId === 'tab-drive' && !isDriveLoaded) fetchDriveData();
-            if (tabId === 'tab-dulieu' && !isSheetLoaded) fetchSheetData(false);
         }
 
         function updateFilters() {
             if (globalLMSData.length === 0) return;
-
             const selectedBlock = document.getElementById('filter-block').value;
             const gvSelect = document.getElementById('filter-gv');
             const monSelect = document.getElementById('filter-mon');
             
             const currentGV = gvSelect.value;
             const currentMon = monSelect.value;
-
             let filteredData = globalLMSData;
 
             if (selectedBlock) filteredData = filteredData.filter(row => row['Block'] === selectedBlock);
@@ -287,7 +637,6 @@
             });
         }
 
-        // --- TAB 1: ĐỐI SOÁT ---
         function runDoiSoat() {
             const gv = document.getElementById('filter-gv').value;
             const mon = document.getElementById('filter-mon').value;
@@ -303,8 +652,7 @@
                 .then(result => {
                     if(result.status === 'success') renderResult(result.data);
                     else container.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi Backend: ${result.message}</div>`;
-                })
-                .catch(err => container.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi kết nối mạng: ${err.message}</div>`);
+                });
         }
 
         function renderResult(data) {
@@ -353,7 +701,6 @@
             container.innerHTML = html;
         }
 
-        // FIX LỖI: Truyền action=saveNote trực tiếp trên URL
         function saveNote(rowIndex, btnElement) {
             const noteContent = document.getElementById('note-input-' + rowIndex).value.trim();
             btnElement.innerText = "⏳..."; btnElement.disabled = true;
@@ -374,7 +721,6 @@
             });
         }
 
-        // --- TAB 2: ĐỌC LMS ---
         function fetchSheetData(isSilent) {
             if (isFetchingSheet && isSilent) return; 
             isFetchingSheet = true;
@@ -407,12 +753,9 @@
                         container.innerHTML = html;
                     }
                 })
-                .finally(() => {
-                    isFetchingSheet = false; 
-                });
+                .finally(() => { isFetchingSheet = false; });
         }
 
-        // --- TAB 3: ĐỌC DRIVE ---
         function fetchDriveData() {
             const statusContainer = document.getElementById('drive-status-container');
             const filesContainer = document.getElementById('drive-files-container');
@@ -435,8 +778,10 @@
                                     </div>
                                 </div>
                                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                    <button class="btn-blue" style="background:#1e2b3c;" onclick="changeDriveUrl()">⚙️ Đổi Link Thư mục Drive</button>
-                                    <button class="btn-blue" style="background:#757575;" onclick="resetDriveUrl()">🔄 Khôi phục mặc định</button>
+                                    ${hasPerm('config') ? `
+                                        <button class="btn-blue" style="background:#1e2b3c;" onclick="changeDriveUrl()">⚙️ Đổi Link Thư mục Drive</button>
+                                        <button class="btn-blue" style="background:#757575;" onclick="resetDriveUrl()">🔄 Khôi phục mặc định</button>
+                                    ` : ''}
                                     <a href="https://drive.google.com/drive/folders/${result.folder_id}" target="_blank" class="btn-blue" style="background:white; color:var(--primary); border:1px solid var(--primary); text-decoration:none;">Mở thư mục ↗</a>
                                 </div>
                             </div>
@@ -452,9 +797,6 @@
                     } else {
                         filesContainer.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi Backend: ${result.message}</div>`;
                     }
-                })
-                .catch(err => {
-                    filesContainer.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi kết nối: ${err.message}</div>`;
                 });
         }
     </script>
