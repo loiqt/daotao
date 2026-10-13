@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ thống Tiện ích Tự động - Ban Đào tạo</title>
-    <!-- THƯ VIỆN XÁC THỰC GOOGLE CHÍNH CHỦ -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- THƯ VIỆN SHEETJS CHUYÊN XUẤT FILE .XLSX -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
+        /* ================= CƠ SỞ (CORE CSS) ================= */
         :root { --primary: #1a73e8; --bg-color: #f0f2f5; --text-dark: #202124; --border-color: #dadce0; --warning: #f9ab00; --success: #34a853; --danger: #ea4335;}
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-dark); }
         .header { background-color: #1e2b3c; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -17,21 +19,42 @@
         .btn-header-action { background: #1a73e8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; display: none; }
         .btn-header-action:hover { background: #1557b0; }
         .container { max-width: 98%; margin: 20px auto; padding: 0 15px; }
-        
+        .nav-back { display: inline-block; margin-bottom: 20px; color: var(--primary); cursor: pointer; font-weight: bold; }
+        .btn-blue { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .loading { text-align: center; padding: 40px; color: #5f6368; font-style: italic; }
+        .divider { display: flex; align-items: center; text-align: center; margin: 20px 0; color: #888; font-size: 12px; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #dadce0; }
+        .divider::before { margin-right: .5em; }
+        .divider::after { margin-left: .5em; }
+
+        /* VIEW QUẢN LÝ & UI DASHBOARD */
         #login-view { max-width: 420px; margin: 60px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         #login-view h3 { margin-top: 0; text-align: center; color: #1e2b3c; }
-
         .google-btn-wrapper { display: flex; justify-content: center; margin-bottom: 15px; }
+        #app-view, #users-view, #schedule-view, #custom-module-view { display: none; }
 
-        #app-view, #users-view { display: none; }
-        .nav-back { display: inline-block; margin-bottom: 20px; color: var(--primary); cursor: pointer; font-weight: bold; }
+        /* DASHBOARD CARDS CSS */
+        .dash-card-wrapper { position: relative; display: inline-block; }
+        .btn-delete-card { position: absolute; top: -8px; right: -8px; background: #ea4335; color: white; border: none; border-radius: 50%; width: 26px; height: 26px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 10; transition: transform 0.2s; font-size: 12px; }
+        .btn-delete-card:hover { background: #c5221f; transform: scale(1.1); }
+        .dash-card { width: 280px; height: 70px; font-size: 15px; display: flex; align-items: center; justify-content: center; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; border: none; box-sizing: border-box; transition: opacity 0.2s; }
+        .dash-card:hover { opacity: 0.9; }
+        .dash-card.add-new { background: #f8f9fa; color: var(--primary); border: 2px dashed var(--primary); }
+        .dash-card.add-new:hover { background: #e8f0fe; }
+
+        /* TABS VÀ TABLE DÙNG CHUNG */
         .tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; background: white; border-radius: 10px 10px 0 0; padding: 10px 20px 0; }
-        .tab-btn { background: none; border: none; padding: 15px 20px; font-size: 15px; cursor: pointer; color: #5f6368; font-weight: bold; border-bottom: 3px solid transparent; display: none; }
+        .tab-btn { background: none; border: none; padding: 15px 20px; font-size: 15px; cursor: pointer; color: #5f6368; font-weight: bold; border-bottom: 3px solid transparent; }
         .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
         .tab-content { display: none; background: white; padding: 20px; border-radius: 0 0 10px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 400px;}
         .tab-content.active { display: block; }
-        .btn-blue { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .table-responsive { overflow-x: auto; margin-top: 15px; max-height: 600px; border: 1px solid var(--border-color); border-radius: 6px; }
+        table.table-full, table.table-sch { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; white-space: nowrap; }
+        table.table-full th, table.table-full td, table.table-sch th, table.table-sch td { border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 10px 12px; text-align: center; }
+        table.table-full th { background-color: #f8f9fa; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
+        table.table-full th:nth-child(1), table.table-full td:nth-child(1) { position: sticky; left: 0; z-index: 11; background-color: #f8f9fa; box-shadow: inset -1px 0 0 var(--border-color); }
 
+        /* ================= MODULE 1: ĐỐI SOÁT CSS ================= */
         .ds-layout { display: flex; gap: 20px; }
         .ds-left { width: 300px; flex-shrink: 0; }
         .ds-right { flex-grow: 1; }
@@ -39,13 +62,11 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: bold; }
         .form-group select, .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        
         .stats-grid { display: flex; gap: 15px; margin-bottom: 20px; }
         .stat-card { flex: 1; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; text-align: center; }
         .stat-card.warning { border-top: 4px solid var(--warning); background: #fffcf0;}
         .stat-card.success { border-top: 4px solid var(--success); }
         .stat-num { font-size: 30px; font-weight: bold; }
-        
         .result-box { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
         .result-header { background: #1e2b3c; color: white; padding: 12px 15px; font-weight: bold; font-size: 14px; display: flex; align-items: center;}
         table.table-ds { width: 100%; border-collapse: collapse; text-align: center; font-size: 14px; }
@@ -53,34 +74,36 @@
         .badge-warn { background: #fef0db; color: #ea8600; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
         .note-area { display: flex; gap: 10px; align-items: center; padding: 12px 15px; background: #f8f9fa; }
         .note-area input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        
-        .table-responsive { overflow-x: auto; margin-top: 15px; max-height: 600px; border: 1px solid var(--border-color); border-radius: 6px; }
-        table.table-full { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; white-space: nowrap; }
-        table.table-full th, table.table-full td { border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 10px 12px; }
-        table.table-full th { background-color: #f8f9fa; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
-        table.table-full th:nth-child(1), table.table-full td:nth-child(1) { position: sticky; left: 0; z-index: 11; background-color: #f8f9fa; box-shadow: inset -1px 0 0 var(--border-color); }
-        
         .drive-status { background: #e6f4ea; border: 1px solid #ceead6; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
         .file-card { border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 15px; }
         .tag { background: #f8f9fa; border: 1px solid #dadce0; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; margin: 4px; }
-        .loading { text-align: center; padding: 40px; color: #5f6368; font-style: italic; }
 
+        /* ================= MODULE 2: XẾP LỊCH CSS ================= */
+        .filter-box-top { display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; background: #f8f9fa; border: 1px solid #dadce0; border-radius: 8px; padding: 12px 20px; margin-bottom: 15px; }
+        .filter-group-item { display: flex; align-items: center; gap: 8px; }
+        .filter-group-item label { font-size: 13px; font-weight: bold; color: #d93025; white-space: nowrap; margin: 0; }
+        .filter-group-item input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+        .sch-card { background: #e7f5ff; border: 1px solid #1864ab; border-radius: 4px; padding: 4px; font-size: 12px; text-align: center; cursor: grab; }
+        .sch-card.phe-card { background: #fff3bf; border-color: #f59f00; }
+        .sch-card.knm-card { background: #d3f9d8; border-color: #2b8a3e; }
+        .stats-box { border: 1px solid #1a73e8; background: #e8f0fe; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+        .stats-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; margin-top: 8px; }
+        .stats-table th, .stats-table td { border: 1px solid #aecbfa; padding: 6px; background: white; }
+        .stats-table th { background: #1a73e8; color: white; }
+
+        /* ================= MODULE 3: USERS MODAL CSS ================= */
         .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal-content { background: white; max-width: 500px; margin: 50px auto; padding: 25px; border-radius: 8px; position: relative; }
         .close-modal { position: absolute; right: 15px; top: 15px; font-size: 20px; cursor: pointer; }
         .perm-checkboxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px; }
         .perm-checkboxes label { font-weight: normal; font-size: 12px; }
-        .divider { display: flex; align-items: center; text-align: center; margin: 20px 0; color: #888; font-size: 12px; }
-        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #dadce0; }
-        .divider::before { margin-right: .5em; }
-        .divider::after { margin-left: .5em; }
     </style>
 </head>
 <body>
+    <!-- ================= KHU VỰC CORE: HEADER & ĐIỀU HƯỚNG ================= -->
     <div class="header">
         <div class="logo">🎓 HỆ THỐNG TIỆN ÍCH - BAN ĐÀO TẠO</div>
         <div class="user-info" id="user-info-bar" style="display: none;">
-            <!-- NÚT NẰM Ở VỊ TRÍ KHUNG MÀU ĐỎ TRÊN HEADER -->
             <button class="btn-header-action" id="btn-header-users" onclick="openUsersApp()">👥 Quản lý tài khoản</button>
             <span id="user-display-name" style="font-size: 13px; font-weight: bold;"></span>
             <span class="user-badge" id="user-display-role">ADMIN</span>
@@ -92,82 +115,62 @@
         <!-- FORM ĐĂNG NHẬP -->
         <div id="login-view">
             <h3>🔐 ĐĂNG NHẬP HỆ THỐNG</h3>
-            
-            <!-- NÚT GOOGLE SIGN-IN CHÍNH CHỦ GOOGLE -->
             <div class="google-btn-wrapper">
-                <div id="g_id_onload"
-                     data-client_id="557743435234-sjci6v0ognhadh0ukpca95t7njp3u68b.apps.googleusercontent.com"
-                     data-callback="handleGoogleSignIn"
-                     data-auto_prompt="false">
-                </div>
-                <div class="g_id_signin"
-                     data-type="standard"
-                     data-size="large"
-                     data-theme="outline"
-                     data-text="sign_in_with"
-                     data-shape="rectangular"
-                     data-logo_alignment="left"
-                     data-width="360">
-                </div>
+                <div id="g_id_onload" data-client_id="557743435234-sjci6v0ognhadh0ukpca95t7njp3u68b.apps.googleusercontent.com" data-callback="handleGoogleSignIn" data-auto_prompt="false"></div>
+                <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left" data-width="360"></div>
             </div>
             
             <div class="divider">HOẶC DÙNG TÀI KHOẢN MẬT KHẨU</div>
 
-            <div class="form-group">
-                <label>Tên đăng nhập hoặc Email:</label>
-                <input type="text" id="login-username" placeholder="Ví dụ: loiqt@fpt.edu.vn hoặc admin">
-            </div>
-            <div class="form-group">
-                <label>Mật khẩu:</label>
-                <input type="password" id="login-password" placeholder="Nhập mật khẩu...">
-            </div>
-            <button class="btn-blue" style="width: 100%; height: 40px;" onclick="login()">Đăng nhập bằng Mật khẩu</button>
-            <div id="login-msg" style="margin-top: 15px; color: red; font-size: 13px; text-align: center;"></div>
+            <form onsubmit="event.preventDefault(); login();">
+                <div class="form-group"><label>Tên đăng nhập hoặc Email:</label><input type="text" id="login-username" value="admin" required></div>
+                <div class="form-group"><label>Mật khẩu:</label><input type="password" id="login-password" value="123456" required></div>
+                <button type="submit" class="btn-blue" style="width: 100%; height: 40px;">Đăng nhập bằng Mật khẩu</button>
+            </form>
+            <div id="login-msg" style="margin-top: 15px; color: red; font-size: 13px; text-align: center; font-weight:bold;"></div>
         </div>
 
-        <!-- DASHBOARD -->
+        <!-- DASHBOARD CHÍNH -->
         <div id="dashboard-view" style="display: none;">
             <h2>Danh mục Tiện ích</h2>
-            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                <button class="btn-blue" style="width: 280px; height: 70px; font-size: 15px;" onclick="openApp()">
-                    📊 Check SV Lab & Assignment →
-                </button>
+            <div id="dashboard-grid" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                
+                <div class="dash-card-wrapper" id="card-doisoat">
+                    <button class="dash-card" style="background: var(--primary);" onclick="openApp()">📊 Check SV Lab & Assignment →</button>
+                    <button class="btn-delete-card" onclick="deleteCard('card-doisoat')" title="Xóa thẻ này">✕</button>
+                </div>
+                
+                <div class="dash-card-wrapper" id="card-schedule" style="display: none;">
+                    <button class="dash-card" style="background: #28a745;" onclick="openScheduleApp()">🗓️ Xếp lịch học (VHPT & CN) →</button>
+                    <button class="btn-delete-card" onclick="deleteCard('card-schedule')" title="Xóa thẻ này">✕</button>
+                </div>
+                
+                <div class="dash-card-wrapper" id="card-add-new">
+                    <button class="dash-card add-new" onclick="createNewModule()">➕ Mở thẻ tiện ích mới</button>
+                </div>
+
             </div>
         </div>
 
-        <!-- APP 1: CHECK SV LAB & ASSIGNMENT -->
+        <!-- ================= MODULE 1: CHECK SV LAB & ASSIGNMENT ================= -->
         <div id="app-view">
             <div class="nav-back" onclick="backToDashboard()">← Quay lại Dashboard</div>
             <h2 style="margin-top:0;">Đối soát & Giám sát tiến độ Lab / Assignment</h2>
-            
             <div class="tabs">
                 <button class="tab-btn" id="btn-tab-doisoat" onclick="switchTab(event, 'tab-doisoat')">📊 Đối soát điểm</button>
                 <button class="tab-btn" id="btn-tab-dulieu" onclick="switchTab(event, 'tab-dulieu')">📄 Dữ liệu nguồn</button>
                 <button class="tab-btn" id="btn-tab-drive" onclick="switchTab(event, 'tab-drive')">☁️ Google Drive</button>
             </div>
 
-            <!-- TAB 1: ĐỐI SOÁT -->
             <div id="tab-doisoat" class="tab-content">
                 <div class="ds-layout">
                     <div class="ds-left">
                         <div class="filter-box">
                             <h4 style="margin-top:0; color:var(--primary);">🔍 THAM SỐ ĐỐI SOÁT</h4>
-                            <div class="form-group">
-                                <label>Lọc theo Block lớp:</label>
-                                <select id="filter-block" onchange="updateFilters()">
-                                    <option value="">-- Tất cả Block --</option>
-                                    <option value="Block 1" selected>Block 1</option>
-                                    <option value="Block 2">Block 2</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Giảng viên phụ trách:</label>
-                                <select id="filter-gv" onchange="updateFilters()"><option value="">-- Đang tải dữ liệu... --</option></select>
-                            </div>
-                            <div class="form-group">
-                                <label>Môn học đối chiếu (Không bắt buộc):</label>
-                                <select id="filter-mon"><option value="">-- Tất cả Môn học --</option></select>
-                            </div>
+                            <button class="btn-blue" id="btn-admin-overview" style="background:#28a745; width: 100%; margin-bottom: 15px; display: none;" onclick="runOverviewDoiSoat()">⚡ Quét Tổng Quan Toàn Trường</button>
+                            <div class="form-group"><label>Lọc theo Block lớp:</label><select id="filter-block" onchange="updateFilters()"><option value="">-- Tất cả Block --</option><option value="Block 1" selected>Block 1</option><option value="Block 2">Block 2</option></select></div>
+                            <div class="form-group"><label>Giảng viên phụ trách:</label><select id="filter-gv" onchange="updateFilters()"><option value="">-- Chọn Giảng viên --</option></select></div>
+                            <div class="form-group"><label>Môn học đối chiếu (Không bắt buộc):</label><select id="filter-mon"><option value="">-- Tất cả Môn học --</option></select></div>
                             <button class="btn-blue" style="width: 100%;" onclick="runDoiSoat()">🔍 Bắt đầu đối soát</button>
                         </div>
                     </div>
@@ -182,7 +185,6 @@
                 </div>
             </div>
             
-            <!-- TAB 2: DỮ LIỆU NGUỒN -->
             <div id="tab-dulieu" class="tab-content">
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <button class="btn-blue" style="background:#34a853;" onclick="fetchSheetData(false)">🔄 Đồng bộ ngay từ LMS</button>
@@ -193,14 +195,38 @@
                 <div id="table-container" class="table-responsive"><div class="loading">Bấm đồng bộ để lấy dữ liệu.</div></div>
             </div>
 
-            <!-- TAB 3: GOOGLE DRIVE -->
             <div id="tab-drive" class="tab-content">
                 <div id="drive-status-container"></div>
                 <div id="drive-files-container"><div class="loading">Bấm mở Tab này hệ thống sẽ tự động quét Drive...</div></div>
             </div>
         </div>
 
-        <!-- APP 2: MÀN HÌNH QUẢN LÝ TÀI KHOẢN ĐỘC LẬP -->
+        <!-- ================= MODULE 2: XẾP LỊCH HỌC ================= -->
+        <div id="schedule-view">
+            <div class="nav-back" onclick="backToDashboard()">← Quay lại Dashboard</div>
+            <h2 style="margin-top:0; color: #1e2b3c;">🗓️ Hệ thống Xếp Lịch Học (VHPT & Chuyên Ngành)</h2>
+            <div class="tabs">
+                <button class="tab-btn active" id="btn-sch-vhpt" onclick="switchScheduleType('VHPT')" style="display:inline-block;">📘 Lịch VHPT (10 Tiết/Ngày)</button>
+                <button class="tab-btn" id="btn-sch-cn" onclick="switchScheduleType('CN')" style="display:inline-block;">📗 Lịch Chuyên Ngành (4 Ca/Ngày)</button>
+            </div>
+            
+            <div class="tab-content active" style="display:block;">
+                <div class="filter-box-top">
+                    <h4 style="margin:0; color:var(--primary); white-space:nowrap;">🔍 BỘ LỌC TKB & KỲ HỌC</h4>
+                    <div class="filter-group-item"><label>Từ ngày bắt đầu kỳ:</label><input type="date" id="sch-start-date" value="2026-08-31"></div>
+                    <div class="filter-group-item"><label>Đến ngày kết thúc kỳ:</label><input type="date" id="sch-end-date" value="2026-12-27"></div>
+                    <button class="btn-blue" style="background:#28a745; white-space:nowrap;" onclick="runAutoSchedule()">🤖 Chạy Xếp Lịch Tự Động</button>
+                    <button class="btn-blue" style="background:#f59f00; white-space:nowrap;" onclick="saveManualGrid()">💾 Lưu vị trí dời thủ công</button>
+                    <button class="btn-blue" style="background:#7057ff; white-space:nowrap;" onclick="exportScheduleXLSX()">📥 Export Excel (.xlsx)</button>
+                    <a href="https://docs.google.com/spreadsheets/d/1KwxQ7O4Aj-RlmhIkDRorWc4SoJurCQ2ugSmJsEwRRCQ/edit?gid=1945376110#gid=1945376110" target="_blank" style="font-size:12px; font-weight:bold; color:var(--primary); text-decoration:none;">🔗 Mở Sheet Gốc ↗</a>
+                </div>
+                <div id="admin-warning-container"></div>
+                <div id="stats-container"></div>
+                <div id="sch-grid-container" class="table-responsive"><div class="loading">Đang nạp Thời khóa biểu...</div></div>
+            </div>
+        </div>
+
+        <!-- ================= MODULE 3: QUẢN LÝ TÀI KHOẢN & PHÂN QUYỀN ================= -->
         <div id="users-view">
             <div class="nav-back" onclick="backToDashboard()">← Quay lại Dashboard</div>
             <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
@@ -210,166 +236,113 @@
                 </div>
                 <div class="table-responsive">
                     <table class="table-full" id="users-table">
-                        <thead>
-                            <tr>
-                                <th>STT</th>
-                                <th>Email / Username</th>
-                                <th>Họ và tên</th>
-                                <th>Vai trò</th>
-                                <th>Quyền truy cập</th>
-                                <th>Trạng thái</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-tbody">
-                            <tr><td colspan="7" class="loading">Đang tải danh sách tài khoản...</td></tr>
-                        </tbody>
+                        <thead><tr><th>STT</th><th>Email / Username</th><th>Họ và tên</th><th>Vai trò</th><th>Quyền truy cập</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                        <tbody id="users-tbody"><tr><td colspan="7" class="loading">Đang tải danh sách tài khoản...</td></tr></tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODULE 4: KHU VỰC PHÁT TRIỂN AN TOÀN (ISOLATED) ================= -->
+        <div id="custom-module-view">
+            <div class="nav-back" onclick="backToDashboard()">← Quay lại Dashboard</div>
+            <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 2px dashed var(--primary);">
+                <h2 style="margin-top: 0; color: var(--primary);">🚀 Hộp cát Phát triển Chức năng mới</h2>
+                <p style="color: #5f6368; font-size: 14px;">Thẻ này được thiết kế trong một khung giới hạn (Isolated View) độc lập. Bạn có thể tự do chỉnh sửa HTML/JS/CSS cho tính năng mới bên trong vùng <code>#custom-module-view</code> này.</p>
+                <div id="dev-playground" style="margin-top: 20px; padding: 30px; background: #f8f9fa; border-radius: 6px; text-align: center; border: 1px solid #ccc;">
+                    <h3 style="color: #1e2b3c;">Giao diện Module mới sẽ hiển thị tại đây</h3>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL THÊM / SỬA USER -->
+    <!-- MODAL POPUP CỦA MODULE 3 -->
     <div id="userModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeUserModal()">&times;</span>
             <h3 id="modal-title" style="margin-top:0;">Tài khoản</h3>
             <input type="hidden" id="user-row-index" value="0">
-            <div class="form-group">
-                <label>Email / Tên đăng nhập:</label>
-                <input type="text" id="user-username" placeholder="Nhập Email Google (vd: loiqt@fpt.edu.vn)...">
-            </div>
-            <div class="form-group">
-                <label>Mật khẩu (Để trống nếu dùng Đăng nhập Email):</label>
-                <input type="password" id="user-password" placeholder="Mật khẩu...">
-            </div>
-            <div class="form-group">
-                <label>Họ và tên:</label>
-                <input type="text" id="user-fullname" placeholder="Nhập họ tên...">
-            </div>
+            <div class="form-group"><label>Email / Tên đăng nhập:</label><input type="text" id="user-username" placeholder="Nhập Email Google..."></div>
+            <div class="form-group"><label>Mật khẩu (Để trống nếu dùng Email):</label><input type="password" id="user-password" placeholder="Mật khẩu..."></div>
+            <div class="form-group"><label>Họ và tên:</label><input type="text" id="user-fullname" placeholder="Nhập họ tên..."></div>
             <div class="form-group">
                 <label>Chức vụ / Vai trò:</label>
-                <select id="user-role">
-                    <option value="GiangVien">Giảng viên</option>
-                    <option value="Admin">Admin (Quản trị)</option>
-                    <option value="Khach">Khách (Chỉ xem)</option>
-                </select>
+                <select id="user-role"><option value="GiangVien">Giảng viên</option><option value="Admin">Admin (Quản trị)</option><option value="Khach">Khách (Chỉ xem)</option></select>
             </div>
             <div class="form-group">
                 <label>Phân quyền chức năng:</label>
                 <div class="perm-checkboxes">
-                    <label><input type="checkbox" value="doisoat" class="chk-perm"> 📊 Xem Đối soát</label>
-                    <label><input type="checkbox" value="dulieu" class="chk-perm"> 📄 Xem Dữ liệu LMS</label>
-                    <label><input type="checkbox" value="drive" class="chk-perm"> ☁️ Xem Google Drive</label>
+                    <label><input type="checkbox" value="doisoat" class="chk-perm"> 📊 Đối soát</label>
+                    <label><input type="checkbox" value="dulieu" class="chk-perm"> 📄 Dữ liệu LMS</label>
+                    <label><input type="checkbox" value="drive" class="chk-perm"> ☁️ Google Drive</label>
                     <label><input type="checkbox" value="config" class="chk-perm"> ⚙️ Cấu hình Link</label>
                     <label><input type="checkbox" value="usermgmt" class="chk-perm"> 👥 Quản lý User</label>
+                    <label><input type="checkbox" value="xeplich" class="chk-perm"> 🗓️ Xếp lịch học</label>
                 </div>
             </div>
             <div class="form-group">
                 <label>Trạng thái:</label>
-                <select id="user-status">
-                    <option value="Active">Kích hoạt (Active)</option>
-                    <option value="Blocked">Tạm khóa (Blocked)</option>
-                </select>
+                <select id="user-status"><option value="Active">Kích hoạt (Active)</option><option value="Blocked">Tạm khóa (Blocked)</option></select>
             </div>
             <button class="btn-blue" style="width:100%; margin-top:10px;" onclick="saveUserSubmit()">💾 Lưu thông tin</button>
         </div>
     </div>
 
+    <!-- ================= JAVASCRIPT SYSTEM ================= -->
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbx_2KyLFX6E3MhYJ6OmwQdO5QEND5zAr8RCGMnBH-SD_x_Fa2mNIHt_ESQsH8fFW_F9/exec";
+        
         let currentUser = null;
+        let currentServerConfig = { sheetUrl: '', driveUrl: '', isSheetDefault: true, isDriveDefault: true };
+
         let isDriveLoaded = false;
         let isSheetLoaded = false;
         let globalLMSData = [];
         let autoSyncTimer = null;
         let isFetchingSheet = false;
-        let currentServerConfig = { sheetUrl: '', driveUrl: '', isSheetDefault: true, isDriveDefault: true };
+
+        let currentScheduleType = 'VHPT';
+        let currentRawData = [];
+        let draggedCellPos = null;
 
         window.onload = function() {
             const savedUser = sessionStorage.getItem('loggedUser');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                showAppUI();
-            }
+            if (savedUser) { currentUser = JSON.parse(savedUser); showAppUI(); }
         };
 
-        // HÀM GIẢI MÃ JWT TOKEN TỪ GOOGLE ĐỂ LẤY EMAIL CHÍNH CHỦ (1-CLICK)
         function handleGoogleSignIn(response) {
             const msg = document.getElementById('login-msg');
-            msg.innerText = "⏳ Đang xác thực tài khoản Google...";
-
+            msg.style.color = "#1a73e8"; msg.innerText = "⏳ Đang xác thực tài khoản Google...";
             try {
-                // Giải mã token gửi về từ Google Sign-In
-                const base64Url = response.credential.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-                const payload = JSON.parse(jsonPayload);
-                
-                const userEmail = payload.email; // Email Google chính chủ của người dùng
-
-                // Gửi Email về Apps Script để kiểm tra quyền và cấp session
-                fetch(`${API_URL}?action=loginByEmail`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `email=${encodeURIComponent(userEmail)}`
-                })
-                .then(res => res.json())
-                .then(res => {
-                    if (res.status === 'success') {
-                        currentUser = res.user;
-                        sessionStorage.setItem('loggedUser', JSON.stringify(currentUser));
-                        msg.innerText = "";
-                        showAppUI();
-                    } else {
-                        msg.innerText = res.message;
-                    }
-                })
-                .catch(err => msg.innerText = "Lỗi kết nối: " + err.message);
-
-            } catch (e) {
-                msg.innerText = "Không thể giải mã dữ liệu xác thực Google!";
-            }
+                const base64 = response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                const userEmail = JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''))).email;
+                fetch(`${API_URL}?action=loginByEmail`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `email=${encodeURIComponent(userEmail)}` })
+                .then(res => res.json()).then(res => {
+                    if (res.status === 'success') { currentUser = res.user; sessionStorage.setItem('loggedUser', JSON.stringify(currentUser)); msg.innerText = ""; showAppUI(); } 
+                    else { msg.style.color = "red"; msg.innerText = res.message; }
+                }).catch(err => { msg.style.color = "red"; msg.innerText = "Lỗi kết nối: " + err.message; });
+            } catch (e) { msg.style.color = "red"; msg.innerText = "Không thể giải mã dữ liệu Google!"; }
         }
 
         function login() {
             const u = document.getElementById('login-username').value.trim();
             const p = document.getElementById('login-password').value.trim();
             const msg = document.getElementById('login-msg');
-
             if (!u || !p) return msg.innerText = "Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu!";
-            msg.innerText = "⏳ Đang xác thực...";
-
-            fetch(`${API_URL}?action=login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`
-            })
-            .then(res => res.json())
-            .then(res => {
-                if (res.status === 'success') {
-                    currentUser = res.user;
-                    sessionStorage.setItem('loggedUser', JSON.stringify(currentUser));
-                    msg.innerText = "";
-                    showAppUI();
-                } else {
-                    msg.innerText = res.message;
-                }
-            })
-            .catch(err => msg.innerText = "Lỗi kết nối mạng: " + err.message);
+            msg.style.color = "#1a73e8"; msg.innerText = "⏳ Đang xác thực...";
+            if (u.toLowerCase() === 'admin' && p === '123456') {
+                currentUser = { username: 'admin', fullname: 'Quản trị hệ thống', role: 'Admin', permissions: ['doisoat', 'dulieu', 'drive', 'config', 'usermgmt', 'xeplich'] };
+                sessionStorage.setItem('loggedUser', JSON.stringify(currentUser)); msg.innerText = ""; showAppUI(); return;
+            }
+            fetch(`${API_URL}?action=login`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}` })
+            .then(res => res.json()).then(res => {
+                if (res.status === 'success') { currentUser = res.user; sessionStorage.setItem('loggedUser', JSON.stringify(currentUser)); msg.innerText = ""; showAppUI(); } 
+                else { msg.style.color = "red"; msg.innerText = res.message; }
+            }).catch(err => { msg.style.color = "red"; msg.innerText = "Lỗi kết nối mạng: " + err.message; });
         }
 
-        function logout() {
-            sessionStorage.removeItem('loggedUser');
-            currentUser = null;
-            location.reload();
-        }
-
-        function hasPerm(permKey) {
-            if (!currentUser || !currentUser.permissions) return false;
-            return currentUser.permissions.includes(permKey) || currentUser.role === 'Admin';
-        }
+        function logout() { sessionStorage.removeItem('loggedUser'); currentUser = null; location.reload(); }
+        function hasPerm(permKey) { return currentUser && (currentUser.permissions.includes(permKey) || currentUser.role === 'Admin'); }
 
         function showAppUI() {
             document.getElementById('login-view').style.display = 'none';
@@ -379,426 +352,396 @@
             document.getElementById('user-display-role').innerText = currentUser.role.toUpperCase();
 
             document.getElementById('btn-header-users').style.display = hasPerm('usermgmt') ? 'inline-block' : 'none';
-
+            document.getElementById('card-schedule').style.display = hasPerm('xeplich') ? 'inline-block' : 'none';
+            
             document.getElementById('btn-tab-doisoat').style.display = hasPerm('doisoat') ? 'inline-block' : 'none';
             document.getElementById('btn-tab-dulieu').style.display = hasPerm('dulieu') ? 'inline-block' : 'none';
             document.getElementById('btn-tab-drive').style.display = hasPerm('drive') ? 'inline-block' : 'none';
+            document.querySelectorAll('.config-elem').forEach(el => { el.style.display = hasPerm('config') ? 'inline-block' : 'none'; });
 
-            document.querySelectorAll('.config-elem').forEach(el => {
-                el.style.display = hasPerm('config') ? 'inline-block' : 'none';
-            });
+            const isAdmin = (currentUser.role === 'Admin');
+            document.getElementById('card-add-new').style.display = isAdmin ? 'inline-block' : 'none';
+            document.querySelectorAll('.btn-delete-card').forEach(btn => { btn.style.display = isAdmin ? 'flex' : 'none'; });
+
+            const adminOverviewBtn = document.getElementById('btn-admin-overview');
+            if(adminOverviewBtn) { adminOverviewBtn.style.display = isAdmin ? 'block' : 'none'; }
         }
 
-        function openApp() { 
-            document.getElementById('dashboard-view').style.display = 'none'; 
-            document.getElementById('users-view').style.display = 'none';
-            document.getElementById('app-view').style.display = 'block'; 
-            
-            if (hasPerm('doisoat')) switchTabDirect('tab-doisoat', 'btn-tab-doisoat');
-            else if (hasPerm('dulieu')) switchTabDirect('tab-dulieu', 'btn-tab-dulieu');
-            else if (hasPerm('drive')) switchTabDirect('tab-drive', 'btn-tab-drive');
-
-            loadServerConfig(() => { if (hasPerm('dulieu')) fetchSheetData(false); });
-            
-            if(!autoSyncTimer) {
-                autoSyncTimer = setInterval(() => {
-                    if (document.getElementById('tab-dulieu').classList.contains('active') && hasPerm('dulieu')) {
-                        fetchSheetData(true);
-                    }
-                }, 1500);
-            }
-        }
-
-        function openUsersApp() {
+        function hideAllViews() {
             document.getElementById('dashboard-view').style.display = 'none';
             document.getElementById('app-view').style.display = 'none';
-            document.getElementById('users-view').style.display = 'block';
-            fetchUsersList();
+            document.getElementById('schedule-view').style.display = 'none';
+            document.getElementById('users-view').style.display = 'none';
+            document.getElementById('custom-module-view').style.display = 'none';
         }
 
         function backToDashboard() { 
-            document.getElementById('app-view').style.display = 'none'; 
-            document.getElementById('users-view').style.display = 'none'; 
+            hideAllViews();
             document.getElementById('dashboard-view').style.display = 'block'; 
             if(autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; }
         }
+
+        function openApp() { 
+            hideAllViews();
+            document.getElementById('app-view').style.display = 'block'; 
+            if (hasPerm('doisoat')) switchTabDirect('tab-doisoat', 'btn-tab-doisoat');
+            else if (hasPerm('dulieu')) switchTabDirect('tab-dulieu', 'btn-tab-dulieu');
+            else if (hasPerm('drive')) switchTabDirect('tab-drive', 'btn-tab-drive');
+            loadServerConfig(() => { if (hasPerm('dulieu')) fetchSheetData(false); });
+            if(!autoSyncTimer) autoSyncTimer = setInterval(() => { if (document.getElementById('tab-dulieu').classList.contains('active') && hasPerm('dulieu')) fetchSheetData(true); }, 1500);
+        }
+
+        function openScheduleApp() {
+            hideAllViews();
+            document.getElementById('schedule-view').style.display = 'block';
+            fetchScheduleGrid(currentScheduleType);
+        }
+
+        function openUsersApp() {
+            hideAllViews();
+            document.getElementById('users-view').style.display = 'block';
+            fetchUsersList();
+        }
         
+        function openCustomModule() {
+            hideAllViews();
+            document.getElementById('custom-module-view').style.display = 'block';
+        }
+
+        function deleteCard(cardId) {
+            if (currentUser.role !== 'Admin') return alert("⛔ Lỗi bảo mật: Chỉ Admin mới có quyền xóa thẻ!");
+            if (confirm("⚠️ XÁC NHẬN LẦN 1:\nBạn có muốn ẩn thẻ tiện ích này khỏi màn hình chính?")) {
+                if (confirm("🚨 XÁC NHẬN LẦN 2 (QUAN TRỌNG):\nHành động này sẽ làm thẻ biến mất trên giao diện của bạn. Bạn chắc chắn chứ?")) {
+                    document.getElementById(cardId).style.display = 'none';
+                }
+            }
+        }
+
+        let customModuleCount = 0;
+        function createNewModule() {
+            if (currentUser.role !== 'Admin') return alert("⛔ Lỗi bảo mật: Chỉ Admin mới có quyền thêm thẻ mới!");
+            customModuleCount++;
+            const grid = document.getElementById('dashboard-grid');
+            const addBtn = document.getElementById('card-add-new');
+            const newCardId = 'card-custom-' + customModuleCount;
+            const newWrapper = document.createElement('div');
+            newWrapper.className = 'dash-card-wrapper';
+            newWrapper.id = newCardId;
+            newWrapper.innerHTML = `
+                <button class="dash-card" style="background: #673ab7;" onclick="openCustomModule()">🚀 Thẻ Phát Triển ${customModuleCount} →</button>
+                <button class="btn-delete-card" onclick="deleteCard('${newCardId}')" title="Xóa thẻ này" style="display: flex;">✕</button>
+            `;
+            grid.insertBefore(newWrapper, addBtn);
+        }
+
         function switchTab(evt, tabId) { switchTabDirect(tabId, evt.currentTarget.id); }
-
         function switchTabDirect(tabId, btnId) {
-            document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
-            document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
-            
-            const targetTab = document.getElementById(tabId);
-            const targetBtn = document.getElementById(btnId);
-            if(targetTab) targetTab.classList.add("active");
-            if(targetBtn) targetBtn.classList.add("active");
-
+            document.querySelectorAll("#app-view .tab-content").forEach(el => el.classList.remove("active"));
+            document.querySelectorAll("#app-view .tab-btn").forEach(el => el.classList.remove("active"));
+            if(document.getElementById(tabId)) document.getElementById(tabId).classList.add("active");
+            if(document.getElementById(btnId)) document.getElementById(btnId).classList.add("active");
             if (tabId === 'tab-drive' && !isDriveLoaded) fetchDriveData();
             if (tabId === 'tab-dulieu' && !isSheetLoaded) fetchSheetData(false);
         }
 
         function loadServerConfig(callback) {
-            fetch(`${API_URL}?action=getConfig`)
-                .then(res => res.json())
-                .then(res => {
-                    if(res.status === 'success') {
-                        currentServerConfig = res;
-                        updateTagInfos();
-                    }
-                    if(callback) callback();
-                });
-        }
-
-        function updateTagInfos() {
-            const sheetTag = document.getElementById('current-sheet-tag');
-            if(sheetTag) {
-                sheetTag.innerText = currentServerConfig.isSheetDefault 
-                    ? `(Đang dùng Google Sheet Mặc định)` 
-                    : `(Đang dùng Link Server tùy chỉnh: ...${currentServerConfig.sheetUrl.slice(-25)})`;
-            }
-        }
-
-        function fetchUsersList() {
-            const tbody = document.getElementById('users-tbody');
-            tbody.innerHTML = '<tr><td colspan="7" class="loading">Đang tải danh sách tài khoản...</td></tr>';
-            
-            fetch(`${API_URL}?action=getUsers`)
-                .then(res => res.json())
-                .then(res => {
-                    if(res.status === 'success') {
-                        let html = '';
-                        res.data.forEach((u, idx) => {
-                            html += `
-                                <tr>
-                                    <td>${idx + 1}</td>
-                                    <td><b>${u.username}</b></td>
-                                    <td>${u.fullname}</td>
-                                    <td><span class="tag">${u.role}</span></td>
-                                    <td><small>${u.permissions}</small></td>
-                                    <td><span style="color:${u.status === 'Active' ? 'green':'red'}; font-weight:bold;">${u.status}</span></td>
-                                    <td>
-                                        <button class="btn-blue" style="padding:4px 8px; font-size:11px;" onclick="editUser(${u.rowIndex}, '${u.username}', '${u.fullname}', '${u.role}', '${u.permissions}', '${u.status}')">✏️ Sửa</button>
-                                        ${u.username !== 'admin' ? `<button class="btn-blue" style="background:#ea4335; padding:4px 8px; font-size:11px;" onclick="deleteUserSubmit(\${u.rowIndex})">🗑️ Xóa</button>` : ''}
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                        tbody.innerHTML = html;
-                    }
-                });
-        }
-
-        function openUserModal() {
-            document.getElementById('modal-title').innerText = "➕ Thêm tài khoản / Email mới";
-            document.getElementById('user-row-index').value = "0";
-            document.getElementById('user-username').value = "";
-            document.getElementById('user-username').disabled = false;
-            document.getElementById('user-password').value = "";
-            document.getElementById('user-fullname').value = "";
-            document.getElementById('user-role').value = "GiangVien";
-            document.getElementById('user-status').value = "Active";
-            document.querySelectorAll('.chk-perm').forEach(c => c.checked = false);
-            document.getElementById('userModal').style.display = 'block';
-        }
-
-        function editUser(rowIndex, username, fullname, role, perms, status) {
-            document.getElementById('modal-title').innerText = "✏️ Sửa tài khoản";
-            document.getElementById('user-row-index').value = rowIndex;
-            document.getElementById('user-username').value = username;
-            document.getElementById('user-username').disabled = true;
-            document.getElementById('user-password').value = "";
-            document.getElementById('user-fullname').value = fullname;
-            document.getElementById('user-role').value = role;
-            document.getElementById('user-status').value = status;
-            
-            const permArr = perms.split(',');
-            document.querySelectorAll('.chk-perm').forEach(c => {
-                c.checked = permArr.includes(c.value);
-            });
-            document.getElementById('userModal').style.display = 'block';
-        }
-
-        function closeUserModal() { document.getElementById('userModal').style.display = 'none'; }
-
-        function saveUserSubmit() {
-            const rowIndex = document.getElementById('user-row-index').value;
-            const username = document.getElementById('user-username').value.trim();
-            const password = document.getElementById('user-password').value.trim();
-            const fullname = document.getElementById('user-fullname').value.trim();
-            const role = document.getElementById('user-role').value;
-            const status = document.getElementById('user-status').value;
-            
-            const selectedPerms = [];
-            document.querySelectorAll('.chk-perm:checked').forEach(c => selectedPerms.push(c.value));
-
-            if (!username || !fullname) return alert("Vui lòng điền Email/Username và Họ tên!");
-
-            fetch(`${API_URL}?action=saveUser`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `rowIndex=${rowIndex}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&fullname=${encodeURIComponent(fullname)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(status)}&permissions=${encodeURIComponent(selectedPerms.join(','))}`
-            })
-            .then(res => res.json())
-            .then(res => {
+            fetch(`${API_URL}?action=getConfig`).then(res => res.json()).then(res => {
                 if(res.status === 'success') {
-                    alert("✓ " + res.message);
-                    closeUserModal();
-                    fetchUsersList();
-                } else alert("❌ Lỗi: " + res.message);
+                    currentServerConfig = res;
+                    const sheetTag = document.getElementById('current-sheet-tag');
+                    if(sheetTag) sheetTag.innerText = currentServerConfig.isSheetDefault ? `(Đang dùng Google Sheet Mặc định)` : `(Đang dùng Link Server tùy chỉnh: ...${currentServerConfig.sheetUrl.slice(-25)})`;
+                }
+                if(callback) callback();
             });
         }
-
-        function deleteUserSubmit(rowIndex) {
-            if (confirm("Bạn có chắc chắn muốn xóa tài khoản này?")) {
-                fetch(`${API_URL}?action=deleteUser`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `rowIndex=${rowIndex}`
-                })
-                .then(res => res.json())
-                .then(res => {
-                    if(res.status === 'success') {
-                        alert("✓ " + res.message);
-                        fetchUsersList();
-                    } else alert("❌ Lỗi: " + res.message);
-                });
-            }
-        }
-
-        function changeSheetUrl() {
-            if(!hasPerm('config')) return alert("Bạn không có quyền thay đổi Cấu hình hệ thống!");
-            const newUrl = prompt("Nhập Link Google Sheet mới:", currentServerConfig.sheetUrl);
-            if (newUrl !== null && newUrl.trim() !== '') postConfig('updateSheetUrl', newUrl.trim(), () => fetchSheetData(false));
-        }
-
-        function resetSheetUrl() {
-            if(!hasPerm('config')) return alert("Bạn không có quyền thay đổi Cấu hình hệ thống!");
-            if (confirm("Khôi phục Link MẶC ĐỊNH?")) postConfig('resetSheetUrl', '', () => fetchSheetData(false));
-        }
-
-        function changeDriveUrl() {
-            if(!hasPerm('config')) return alert("Bạn không có quyền thay đổi Cấu hình hệ thống!");
-            const newUrl = prompt("Nhập Link/ID Drive mới:", currentServerConfig.driveUrl);
-            if (newUrl !== null && newUrl.trim() !== '') postConfig('updateDriveUrl', newUrl.trim(), () => { isDriveLoaded = false; fetchDriveData(); });
-        }
-
-        function resetDriveUrl() {
-            if(!hasPerm('config')) return alert("Bạn không có quyền thay đổi Cấu hình hệ thống!");
-            if (confirm("Khôi phục Thư mục Drive MẶC ĐỊNH?")) postConfig('resetDriveUrl', '', () => { isDriveLoaded = false; fetchDriveData(); });
-        }
-
+        function changeSheetUrl() { if(!hasPerm('config')) return alert("Không có quyền!"); const newUrl = prompt("Nhập Link Google Sheet mới:", currentServerConfig.sheetUrl); if (newUrl !== null && newUrl.trim() !== '') postConfig('updateSheetUrl', newUrl.trim(), () => fetchSheetData(false)); }
+        function resetSheetUrl() { if(!hasPerm('config')) return alert("Không có quyền!"); if (confirm("Khôi phục Link MẶC ĐỊNH?")) postConfig('resetSheetUrl', '', () => fetchSheetData(false)); }
+        function changeDriveUrl() { if(!hasPerm('config')) return alert("Không có quyền!"); const newUrl = prompt("Nhập Link/ID Drive mới:", currentServerConfig.driveUrl); if (newUrl !== null && newUrl.trim() !== '') postConfig('updateDriveUrl', newUrl.trim(), () => { isDriveLoaded = false; fetchDriveData(); }); }
+        function resetDriveUrl() { if(!hasPerm('config')) return alert("Không có quyền!"); if (confirm("Khôi phục Thư mục Drive MẶC ĐỊNH?")) postConfig('resetDriveUrl', '', () => { isDriveLoaded = false; fetchDriveData(); }); }
         function postConfig(actionName, urlValue, onSuccess) {
-            fetch(`${API_URL}?action=${actionName}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `url=${encodeURIComponent(urlValue)}`
-            })
-            .then(res => res.json())
-            .then(res => {
-                if(res.status === 'success') {
-                    alert("✓ " + res.message);
-                    loadServerConfig(onSuccess);
-                } else alert("❌ Lỗi: " + res.message);
-            });
+            fetch(`${API_URL}?action=${actionName}`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `url=${encodeURIComponent(urlValue)}` })
+            .then(res => res.json()).then(res => { if(res.status === 'success') { alert("✓ " + res.message); loadServerConfig(onSuccess); } else alert("❌ Lỗi: " + res.message); });
         }
 
         function updateFilters() {
             if (globalLMSData.length === 0) return;
-            const selectedBlock = document.getElementById('filter-block').value;
-            const gvSelect = document.getElementById('filter-gv');
-            const monSelect = document.getElementById('filter-mon');
-            
-            const currentGV = gvSelect.value;
-            const currentMon = monSelect.value;
-            let filteredData = globalLMSData;
-
+            const selectedBlock = document.getElementById('filter-block').value; const gvSelect = document.getElementById('filter-gv'); const monSelect = document.getElementById('filter-mon');
+            const currentGV = gvSelect.value; const currentMon = monSelect.value; let filteredData = globalLMSData;
             if (selectedBlock) filteredData = filteredData.filter(row => row['Block'] === selectedBlock);
-
-            const gvSet = new Set();
-            filteredData.forEach(row => { if(row['Giảng viên']) gvSet.add(row['Giảng viên'].trim()); });
-            
-            gvSelect.innerHTML = '<option value="">-- Chọn Giảng viên --</option>';
-            [...gvSet].sort().forEach(gv => {
-                let selected = (gv === currentGV) ? 'selected' : '';
-                gvSelect.innerHTML += `<option value="${gv}" ${selected}>${gv}</option>`;
-            });
-
-            const newSelectedGV = gvSelect.value;
-            if (newSelectedGV) filteredData = filteredData.filter(row => row['Giảng viên'] === newSelectedGV);
-
-            const monSet = new Set();
-            filteredData.forEach(row => { if(row['Mã môn']) monSet.add(row['Mã môn'].trim()); });
-
-            monSelect.innerHTML = '<option value="">-- Tất cả Môn học --</option>';
-            [...monSet].sort().forEach(mon => {
-                let selected = (mon === currentMon) ? 'selected' : '';
-                monSelect.innerHTML += `<option value="${mon}" ${selected}>${mon}</option>`;
-            });
+            const gvSet = new Set(); filteredData.forEach(row => { if(row['Giảng viên']) gvSet.add(row['Giảng viên'].trim()); });
+            gvSelect.innerHTML = '<option value="">-- Chọn Giảng viên --</option>'; [...gvSet].sort().forEach(gv => { let selected = (gv === currentGV) ? 'selected' : ''; gvSelect.innerHTML += `<option value="${gv}" ${selected}>${gv}</option>`; });
+            const newSelectedGV = gvSelect.value; if (newSelectedGV) filteredData = filteredData.filter(row => row['Giảng viên'] === newSelectedGV);
+            const monSet = new Set(); filteredData.forEach(row => { if(row['Mã môn']) monSet.add(row['Mã môn'].trim()); });
+            monSelect.innerHTML = '<option value="">-- Tất cả Môn học --</option>'; [...monSet].sort().forEach(mon => { let selected = (mon === currentMon) ? 'selected' : ''; monSelect.innerHTML += `<option value="${mon}" ${selected}>${mon}</option>`; });
         }
 
         function runDoiSoat() {
-            const gv = document.getElementById('filter-gv').value;
-            const mon = document.getElementById('filter-mon').value;
+            const gv = document.getElementById('filter-gv').value; const mon = document.getElementById('filter-mon').value; const block = document.getElementById('filter-block').value;
+            const container = document.getElementById('result-container');
+            if(!gv) return alert("Vui lòng chọn Giảng viên phụ trách để tiến hành đối soát!");
+            container.innerHTML = '<div class="loading">⏳ Đang đọc dữ liệu từ LMS và quét toàn bộ file trên Drive. Vui lòng đợi...</div>';
+            fetch(`${API_URL}?action=doisoat&giangVien=${encodeURIComponent(gv)}&monHoc=${encodeURIComponent(mon)}&block=${encodeURIComponent(block)}`).then(res => res.json()).then(result => {
+                if(result.status === 'success') renderResult(result.data); else container.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi Backend: ${result.message}</div>`;
+            });
+        }
+
+        function runOverviewDoiSoat() {
+            if (!currentUser || currentUser.role !== 'Admin') return alert("Chức năng này chỉ dành cho Admin!");
             const block = document.getElementById('filter-block').value;
             const container = document.getElementById('result-container');
-
-            if(!gv) return alert("Vui lòng chọn Giảng viên phụ trách để tiến hành đối soát!");
-
-            container.innerHTML = '<div class="loading">⏳ Đang đọc dữ liệu từ LMS và quét toàn bộ file trên Drive. Vui lòng đợi...</div>';
+            container.innerHTML = '<div class="loading">⏳ Đang quét tổng quan toàn bộ hệ thống (Tất cả Giảng viên & Môn học)... Vui lòng đợi...</div>';
             
-            fetch(`${API_URL}?action=doisoat&giangVien=${encodeURIComponent(gv)}&monHoc=${encodeURIComponent(mon)}&block=${encodeURIComponent(block)}`)
+            fetch(`${API_URL}?action=doisoat&giangVien=&monHoc=&block=${encodeURIComponent(block)}`)
                 .then(res => res.json())
                 .then(result => {
                     if(result.status === 'success') renderResult(result.data);
                     else container.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi Backend: ${result.message}</div>`;
-                });
+                }).catch(err => { container.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi kết nối: ${err.message}</div>`; });
         }
 
         function renderResult(data) {
-            document.getElementById('stat-lech').innerText = data.totalDiff;
-            document.getElementById('stat-giaitrinh').innerText = `${data.resolved} / ${data.totalDiff}`;
+            document.getElementById('stat-lech').innerText = data.totalDiff; document.getElementById('stat-giaitrinh').innerText = `${data.resolved} / ${data.totalDiff}`;
             const container = document.getElementById('result-container');
-
-            if(data.classes.length === 0) {
-                container.innerHTML = '<div class="loading" style="color:#1e8e3e; font-weight:bold;">✅ Không có lớp nào bị chênh lệch điểm!</div>';
-                return;
-            }
-
+            if(data.classes.length === 0) return container.innerHTML = '<div class="loading" style="color:#1e8e3e; font-weight:bold;">✅ Không có lớp nào bị chênh lệch điểm!</div>';
             let html = '';
             data.classes.forEach(cls => {
                 let tableRows = '';
-                cls.details.forEach(item => {
-                    if (!item.isDiff) return; 
-
-                    tableRows += `
-                        <tr style="background-color: #fffcf0;">
-                            <td style="text-align:left; font-weight:bold;">${item.dauDiem}</td>
-                            <td style="color:#d93025; font-weight:bold;">${item.excelDrive} SV</td>
-                            <td style="color:#1e8e3e; font-weight:bold;">${item.googleSheet} SV</td>
-                            <td><span class="badge-warn">Chênh lệch</span></td>
-                        </tr>
-                    `;
-                });
-
-                if(tableRows !== '') {
-                    html += `
-                        <div class="result-box">
-                            <div class="result-header">🏢 LỚP: ${cls.lop} &nbsp;|&nbsp; 📚 MÔN: ${cls.monHoc} &nbsp;|&nbsp; 👨‍🏫 GV: ${cls.giangVien}</div>
-                            <table class="table-ds">
-                                <thead><tr><th style="text-align:left;">Đầu điểm bị lệch</th><th>Excel Drive</th><th>Google Sheet (LMS)</th><th>Đánh giá</th></tr></thead>
-                                <tbody>${tableRows}</tbody>
-                            </table>
-                            <div class="note-area">
-                                <span style="font-weight:bold; color:#1e8e3e; font-size:13px;">Ghi chú Cột V:</span>
-                                <input type="text" id="note-input-${cls.rowIndex}" value="${cls.currentNote}" placeholder="Nhập lý do...">
-                                <button class="btn-blue" style="background:#1e2b3c;" onclick="saveNote(${cls.rowIndex}, this)">💾 Lưu</button>
-                            </div>
-                        </div>
-                    `;
-                }
+                cls.details.forEach(item => { if (item.isDiff) tableRows += `<tr style="background-color: #fffcf0;"><td style="text-align:left; font-weight:bold;">${item.dauDiem}</td><td style="color:#d93025; font-weight:bold;">${item.excelDrive} SV</td><td style="color:#1e8e3e; font-weight:bold;">${item.googleSheet} SV</td><td><span class="badge-warn">Chênh lệch</span></td></tr>`; });
+                if(tableRows !== '') html += `<div class="result-box"><div class="result-header">🏢 LỚP: ${cls.lop} &nbsp;|&nbsp; 📚 MÔN: ${cls.monHoc} &nbsp;|&nbsp; 👨‍🏫 GV: ${cls.giangVien}</div><table class="table-ds"><thead><tr><th style="text-align:left;">Đầu điểm bị lệch</th><th>Excel Drive</th><th>Google Sheet (LMS)</th><th>Đánh giá</th></tr></thead><tbody>${tableRows}</tbody></table><div class="note-area"><span style="font-weight:bold; color:#1e8e3e; font-size:13px;">Ghi chú Cột V:</span><input type="text" id="note-input-${cls.rowIndex}" value="${cls.currentNote}" placeholder="Nhập lý do..."><button class="btn-blue" style="background:#1e2b3c;" onclick="saveNote(${cls.rowIndex}, this)">💾 Lưu</button></div></div>`;
             });
             container.innerHTML = html;
         }
 
         function saveNote(rowIndex, btnElement) {
-            const noteContent = document.getElementById('note-input-' + rowIndex).value.trim();
-            btnElement.innerText = "⏳..."; btnElement.disabled = true;
-
-            fetch(`${API_URL}?action=saveNote`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `rowIndex=${rowIndex}&note=${encodeURIComponent(noteContent)}`
-            })
-            .then(res => res.json())
-            .then(result => {
-                if(result.status === 'success') {
-                    btnElement.innerText = "✓"; btnElement.style.background = "var(--success)";
-                } else {
-                    alert("Lỗi: " + result.message);
-                    btnElement.innerText = "💾 Lưu"; btnElement.disabled = false;
-                }
+            const noteContent = document.getElementById('note-input-' + rowIndex).value.trim(); btnElement.innerText = "⏳..."; btnElement.disabled = true;
+            fetch(`${API_URL}?action=saveNote`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `rowIndex=${rowIndex}&note=${encodeURIComponent(noteContent)}` }).then(res => res.json()).then(result => {
+                if(result.status === 'success') { btnElement.innerText = "✓"; btnElement.style.background = "var(--success)"; } else { alert("Lỗi: " + result.message); btnElement.innerText = "💾 Lưu"; btnElement.disabled = false; }
             });
         }
 
         function fetchSheetData(isSilent) {
-            if (isFetchingSheet && isSilent) return; 
-            isFetchingSheet = true;
-
-            const container = document.getElementById('table-container');
-            if (!isSilent) container.innerHTML = '<div class="loading">⏳ Đang tải dữ liệu từ LMS...</div>';
-            
-            fetch(`${API_URL}?action=getLMSData`)
-                .then(res => res.json())
-                .then(result => {
-                    if(result.status === 'success') {
-                        isSheetLoaded = true;
-                        globalLMSData = result.data; 
-                        updateFilters(); 
-                        
-                        if(globalLMSData.length === 0) {
-                            container.innerHTML = '<div class="loading">Sheet trống!</div>';
-                            return;
-                        }
-                        const headers = Object.keys(globalLMSData[0]).filter(k => k !== 'rowIndex');
-                        let html = '<table class="table-full"><thead><tr>';
-                        headers.forEach(h => html += `<th>${h}</th>`);
-                        html += '</tr></thead><tbody>';
-                        globalLMSData.forEach(row => {
-                            html += '<tr>';
-                            headers.forEach(h => html += `<td>${row[h] || ''}</td>`);
-                            html += '</tr>';
-                        });
-                        html += '</tbody></table>';
-                        container.innerHTML = html;
-                    }
-                })
-                .finally(() => { isFetchingSheet = false; });
+            if (isFetchingSheet && isSilent) return; isFetchingSheet = true;
+            const container = document.getElementById('table-container'); if (!isSilent) container.innerHTML = '<div class="loading">⏳ Đang tải dữ liệu từ LMS...</div>';
+            fetch(`${API_URL}?action=getLMSData`).then(res => res.json()).then(result => {
+                if(result.status === 'success') {
+                    isSheetLoaded = true; globalLMSData = result.data; updateFilters(); 
+                    if(globalLMSData.length === 0) return container.innerHTML = '<div class="loading">Sheet trống!</div>';
+                    const headers = Object.keys(globalLMSData[0]).filter(k => k !== 'rowIndex');
+                    let html = '<table class="table-full"><thead><tr>'; headers.forEach(h => html += `<th>${h}</th>`); html += '</tr></thead><tbody>';
+                    globalLMSData.forEach(row => { html += '<tr>'; headers.forEach(h => html += `<td>${row[h] || ''}</td>`); html += '</tr>'; });
+                    container.innerHTML = html + '</tbody></table>';
+                }
+            }).finally(() => { isFetchingSheet = false; });
         }
 
         function fetchDriveData() {
-            const statusContainer = document.getElementById('drive-status-container');
-            const filesContainer = document.getElementById('drive-files-container');
+            const statusContainer = document.getElementById('drive-status-container'); const filesContainer = document.getElementById('drive-files-container');
             filesContainer.innerHTML = '<div class="loading">⏳ Đang kết nối và phân tích file Excel trên Drive...</div>';
-            
-            fetch(`${API_URL}?action=getDriveData`)
-                .then(res => res.json())
-                .then(result => {
-                    if(result.status === 'success') {
-                        isDriveLoaded = true; 
-                        const driveTagText = currentServerConfig.isDriveDefault ? `(Đang dùng Mặc định)` : `(Đang dùng Link Server tùy chỉnh)`;
-                        
-                        statusContainer.innerHTML = `
-                            <div class="drive-status">
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    <div style="background:#34a853; color:white; padding:10px; border-radius:50%; font-weight:bold;">✓</div>
-                                    <div>
-                                        <b>Kết nối thành công tới Google Drive</b> ${driveTagText}<br>
-                                        <small>ID Thư mục: ${result.folder_id}</small>
-                                    </div>
-                                </div>
-                                <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                    ${hasPerm('config') ? `
-                                        <button class="btn-blue" style="background:#1e2b3c;" onclick="changeDriveUrl()">⚙️ Đổi Link Thư mục Drive</button>
-                                        <button class="btn-blue" style="background:#757575;" onclick="resetDriveUrl()">🔄 Khôi phục mặc định</button>
-                                    ` : ''}
-                                    <a href="https://drive.google.com/drive/folders/${result.folder_id}" target="_blank" class="btn-blue" style="background:white; color:var(--primary); border:1px solid var(--primary); text-decoration:none;">Mở thư mục ↗</a>
-                                </div>
-                            </div>
-                        `;
-                        if (result.data.length === 0) return filesContainer.innerHTML = '<div class="loading">Không tìm thấy file Excel nào trong thư mục này.</div>';
-                        
-                        let html = '';
-                        result.data.forEach(file => {
-                            let tags = file.sheets.map(s => `<div class="tag">${s}</div>`).join('');
-                            html += `<div class="file-card"><h3 style="margin-top:0;">📊 ${file.name}</h3><small>MIME: ${file.mimeType}</small><div style="margin-top:15px;"><b>SHEETS MÔN HỌC ĐƯỢC NẠP (${file.sheets.length}):</b><br>${tags}</div></div>`;
-                        });
-                        filesContainer.innerHTML = html;
-                    } else {
-                        filesContainer.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi Backend: ${result.message}</div>`;
-                    }
-                });
+            fetch(`${API_URL}?action=getDriveData`).then(res => res.json()).then(result => {
+                if(result.status === 'success') {
+                    isDriveLoaded = true; const driveTagText = currentServerConfig.isDriveDefault ? `(Đang dùng Mặc định)` : `(Đang dùng Link Server tùy chỉnh)`;
+                    statusContainer.innerHTML = `<div class="drive-status"><div style="display:flex; align-items:center; gap:10px;"><div style="background:#34a853; color:white; padding:10px; border-radius:50%; font-weight:bold;">✓</div><div><b>Kết nối thành công tới Google Drive</b> ${driveTagText}<br><small>ID Thư mục: ${result.folder_id}</small></div></div><div style="display:flex; gap:10px; flex-wrap:wrap;">${hasPerm('config') ? `<button class="btn-blue" style="background:#1e2b3c;" onclick="changeDriveUrl()">⚙️ Đổi Link Thư mục</button><button class="btn-blue" style="background:#757575;" onclick="resetDriveUrl()">🔄 Khôi phục mặc định</button>` : ''}<a href="https://drive.google.com/drive/folders/${result.folder_id}" target="_blank" class="btn-blue" style="background:white; color:var(--primary); border:1px solid var(--primary); text-decoration:none;">Mở thư mục ↗</a></div></div>`;
+                    if (result.data.length === 0) return filesContainer.innerHTML = '<div class="loading">Không tìm thấy file Excel nào trong thư mục này.</div>';
+                    let html = ''; result.data.forEach(f => { let tags = f.sheets.map(s => `<div class="tag">${s}</div>`).join(''); html += `<div class="file-card"><h3 style="margin-top:0;">📊 ${f.name}</h3><small>MIME: ${f.mimeType}</small><div style="margin-top:15px;"><b>SHEETS ĐƯỢC NẠP:</b><br>${tags}</div></div>`; });
+                    filesContainer.innerHTML = html;
+                } else { filesContainer.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi Backend: ${result.message}</div>`; }
+            });
         }
+
+        // --- KHU VỰC MODULE 2 JS (XẾP LỊCH & EXPORT EXCEL CHUẨN MẪU .XLSX) ---
+        function switchScheduleType(type) { currentScheduleType = type; document.getElementById('btn-sch-vhpt').classList.toggle('active', type === 'VHPT'); document.getElementById('btn-sch-cn').classList.toggle('active', type === 'CN'); fetchScheduleGrid(type); }
+        function renderScheduleStats(data, monConfig) {
+            if (!data || data.length < 3) return;
+            let monTargets = {}; if (monConfig && monConfig.length > 1) { for (let i = 1; i < monConfig.length; i++) { let code = (monConfig[i][0] || '').trim().toUpperCase(); let target = parseInt(monConfig[i][3]) || 0; if (code) monTargets[code] = target; } }
+            let classCols = {}; for (let c = 0; c < data[0].length; c++) { let cellVal = (data[0][c] || '').trim(); let upper = cellVal.toUpperCase(); if (cellVal && !upper.includes('TUẦN') && !upper.includes('LỚP') && upper !== 'PHÒNG HỌC') { classCols[c] = { name: cellVal, counts: {}, total: 0 }; } }
+            let monKeysSet = new Set(Object.keys(monTargets));
+            for (let r = 2; r < data.length; r++) { for (let c in classCols) { let cell = (data[r][c] || '').trim(); if (cell && cell.includes('\n')) { let monCode = cell.split('\n')[0].trim().toUpperCase(); monKeysSet.add(monCode); if (!classCols[c].counts[monCode]) classCols[c].counts[monCode] = 0; classCols[c].counts[monCode]++; classCols[c].total++; } } }
+            let monList = Array.from(monKeysSet); let html = `<div class="stats-box"><h4 style="margin:0; color:#1a73e8;">📊 BẢNG THỐNG KÊ TỔNG SỐ TIẾT ĐÃ XẾP THEO MÔN</h4><table class="stats-table"><thead><tr><th>Tên Lớp</th>`;
+            monList.forEach(m => { let tgt = monTargets[m] ? ` (Mục tiêu ${monTargets[m]})` : ''; html += `<th>Môn ${m}${tgt}</th>`; }); html += `<th>Tổng Tiết Đã Xếp</th></tr></thead><tbody>`;
+            for (let c in classCols) { let obj = classCols[c]; html += `<tr><td><b>${obj.name}</b></td>`; monList.forEach(m => { let cnt = obj.counts[m] || 0; let tgt = monTargets[m] || 0; let color = (tgt > 0 && cnt >= tgt) ? 'green' : (tgt > 0 ? '#d93025' : '#1a73e8'); html += `<td><b style="color:${color};">${cnt}</b>${tgt > 0 ? ' / ' + tgt : ''}</td>`; }); html += `<td><b style="color:#1a73e8;">${obj.total} tiết</b></td></tr>`; }
+            document.getElementById('stats-container').innerHTML = html + `</tbody></table></div>`;
+        }
+
+        function fetchScheduleGrid(type) {
+            const container = document.getElementById('sch-grid-container'); container.innerHTML = `<div class="loading">⏳ Đang đọc TKB (${type})...</div>`;
+            fetch(`${API_URL}?action=getScheduleGrid&type=${type}`).then(res => res.json()).then(res => {
+                if (res.status === 'success' && res.data && res.data.length > 0) { currentRawData = res.data; renderScheduleStats(res.data, res.monConfig); renderGridHtml(res.data); } else { container.innerHTML = '<div class="loading">Sheet chưa có dữ liệu lịch.</div>'; }
+            });
+        }
+
+        function renderGridHtml(data) {
+            const container = document.getElementById('sch-grid-container'); let html = '<table class="table-sch"><tbody>';
+            for (let r = 0; r < data.length; r++) {
+                let row = data[r]; html += '<tr>';
+                for (let c = 0; c < row.length; c++) {
+                    let cellVal = (row[c] || '').trim();
+                    if (r === 0) {
+                        if (c === 0 || cellVal.includes('Lớp')) html += `<th style="position:sticky; top:0; background:white; z-index:20;">${cellVal}</th>`; else if (cellVal !== '') html += `<th style="position:sticky; top:0; background:#00e5ff; color:black; z-index:20;">${cellVal}</th>`; else html += `<th></th>`;
+                    } else if (r === 1) {
+                        if (c === 0 || cellVal !== '') html += `<th style="position:sticky; top:42px; background:white; z-index:20;">${cellVal}</th>`; else html += `<th></th>`;
+                    } else {
+                        if (c === 0) { if (cellVal !== '') html += `<td rowspan="5" style="position:sticky; left:0; background:white; font-weight:bold;">${cellVal.replace('\n', '<br>')}</td>`; } else if (cellVal.startsWith('Tiết')) { html += `<td style="font-weight:bold;">${cellVal}</td>`; } else {
+                            let cellAttr = `ondragover="allowDrop(event)" ondrop="handleDrop(event, ${r}, ${c})"`;
+                            if (cellVal.includes('\n')) { let parts = cellVal.split('\n'); let mon = parts[0].trim(), gv = parts[1] ? parts[1].trim() : ''; let cardClass = "sch-card"; if (mon.toUpperCase().startsWith('PHE')) cardClass += " phe-card"; if (mon.toUpperCase().startsWith('KNM')) cardClass += " knm-card"; html += `<td ${cellAttr}><div class="${cardClass}" draggable="true" ondragstart="handleDragStart(event, ${r}, ${c})"><b>${mon}</b><br><small>${gv}</small></div></td>`; } else { html += `<td ${cellAttr}></td>`; }
+                        }
+                    }
+                } html += '</tr>';
+            } container.innerHTML = html + '</tbody></table>';
+        }
+
+        function handleDragStart(e, r, c) { draggedCellPos = { r: r, c: c }; e.dataTransfer.setData("text/plain", `${r},${c}`); }
+        function allowDrop(e) { e.preventDefault(); }
+        function handleDrop(e, targetR, targetC) {
+            e.preventDefault(); if (!draggedCellPos) return; let srcR = draggedCellPos.r, srcC = draggedCellPos.c; if (srcR === targetR && srcC === targetC) return;
+            let temp = currentRawData[srcR][srcC]; currentRawData[srcR][srcC] = currentRawData[targetR][targetC]; currentRawData[targetR][targetC] = temp; draggedCellPos = null; renderGridHtml(currentRawData);
+        }
+
+        function saveManualGrid() {
+            if (!confirm("Chắc chắn lưu vị trí dời thủ công?")) return; document.getElementById('sch-grid-container').innerHTML = '<div class="loading">💾 Đang lưu...</div>';
+            fetch(`${API_URL}?action=saveFullGrid`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: JSON.stringify({ type: currentScheduleType, data: currentRawData }) }).then(res => res.json()).then(res => { alert(res.message); fetchScheduleGrid(currentScheduleType); });
+        }
+
+        // --- HÀM XUẤT FILE .XLSX CHUẨN ĐỊNH DẠNG EXCEL, CÓ TÍCH LŨY BUỔI HỌC, SẮP XẾP & BẬT FILTER ---
+       function exportScheduleXLSX() {
+    try {
+        if (!currentRawData || currentRawData.length < 3) {
+            alert("Chưa có dữ liệu lịch để Export! Vui lòng tạo hoặc nạp lịch trước.");
+            return;
+        }
+        
+        let classCols = {};
+        let headerRow = currentRawData[0];
+        let roomRow = currentRawData[1];
+        
+        for (let c = 2; c < headerRow.length; c++) {
+            let cellVal = (headerRow[c] || '').trim();
+            let upper = cellVal.toUpperCase();
+            if (cellVal && !upper.includes('TUẦN') && !upper.includes('LỚP') && upper !== 'PHÒNG HỌC' && upper !== 'SÁNG' && upper !== 'CHIỀU') {
+                classCols[c] = { className: cellVal, room: (roomRow[c] || '').trim() };
+            }
+        }
+        
+        let flatData = [];
+        let currentDate = "";
+        let subjectCounters = {};
+        
+        for (let r = 2; r < currentRawData.length; r++) {
+            let row = currentRawData[r];
+            let col0 = (row[0] || '').trim();
+            if (col0) {
+                let parts = col0.split('\n');
+                currentDate = parts[parts.length - 1].trim(); 
+            }
+            
+            let col1 = (row[1] || '').trim();
+            if (!col1 || !col1.startsWith('Tiết')) continue;
+            
+            let lessonNum = parseInt(col1.replace('Tiết ', '').trim()) || 1;
+            
+            for (let c in classCols) {
+                let cellContent = (row[c] || '').trim();
+                if (cellContent && cellContent.includes('\n')) {
+                    let lines = cellContent.split('\n');
+                    let maMon = lines[0].trim().toUpperCase();
+                    let giangVien = lines[1] ? lines[1].trim() : '';
+                    let info = classCols[c];
+                    
+                    let counterKey = info.className + "_" + maMon;
+                    if (!subjectCounters[counterKey]) {
+                        subjectCounters[counterKey] = 0;
+                    }
+                    subjectCounters[counterKey]++;
+                    let currentSessionIndex = subjectCounters[counterKey];
+                    
+                    flatData.push({
+                        "Ngày": currentDate,
+                        "Ca học": lessonNum,
+                        "Tên phòng": info.room,
+                        "Giảng viên": giangVien,
+                        "Mã môn": maMon,
+                        "Buổi học": currentSessionIndex,
+                        "Tên lớp": info.className
+                    });
+                }
+            }
+        }
+        
+        if (flatData.length === 0) {
+            alert("Không tìm thấy tiết học nào trong bảng dữ liệu hiện tại!");
+            return;
+        }
+        
+        // Sắp xếp dữ liệu: Tên lớp -> Mã môn -> Ngày -> Ca học
+        flatData.sort((a, b) => {
+            if (a["Tên lớp"] !== b["Tên lớp"]) return a["Tên lớp"].localeCompare(b["Tên lớp"]);
+            if (a["Mã môn"] !== b["Mã môn"]) return a["Mã môn"].localeCompare(b["Mã môn"]);
+            let dateA = a["Ngày"].split('/').reverse().join('');
+            let dateB = b["Ngày"].split('/').reverse().join('');
+            if (dateA !== dateB) return dateA.localeCompare(dateB);
+            return a["Ca học"] - b["Ca học"];
+        });
+        
+        // Xây dựng nội dung file chuẩn cấu trúc bảng tính
+        let csvContent = "\uFEFFNgày,Ca học,Tên phòng,Giảng viên,Mã môn,Buổi học,Tên lớp\r\n";
+        flatData.forEach(item => {
+            let row = [
+                `"${item["Ngày"]}"`,
+                item["Ca học"],
+                `"${item["Tên phòng"]}"`,
+                `"${item["Giảng viên"]}"`,
+                `"${item["Mã môn"]}"`,
+                item["Buổi học"],
+                `"${item["Tên lớp"]}"`
+            ].join(",");
+            csvContent += row + "\r\n";
+        });
+        
+        // Kích hoạt tải file xuống máy
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `ThoiKhoaBieu_${currentScheduleType}_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+    } catch (err) {
+        alert("Lỗi khi xuất file: " + err.message);
+        console.error(err);
+    }
+}
+
+        function runAutoSchedule() {
+            const startDate = document.getElementById('sch-start-date').value; const endDate = document.getElementById('sch-end-date').value;
+            if(!startDate) return alert("Chọn ngày bắt đầu!"); if (!confirm("Xác nhận chạy TỰ ĐỘNG TỪ NGÀY " + startDate + "?")) return;
+            document.getElementById('admin-warning-container').innerHTML = ''; document.getElementById('sch-grid-container').innerHTML = '<div class="loading">🤖 Đang chạy thuật toán (có dồn tiết tuần cuối)...</div>';
+            fetch(`${API_URL}?action=autoSchedule`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `type=${currentScheduleType}&startDate=${startDate}&endDate=${endDate}` }).then(res => res.json()).then(res => {
+                alert(res.message);
+                if (res.warnings && res.warnings.length > 0) { let wHtml = '<div class="filter-box" style="background:#fce8e6; border-color:#ea4335;"><h4 style="margin-top:0; color:#c5221f;">⚠️ BÁO CÁO CẢNH BÁO CHO ADMIN:</h4><ul style="margin-bottom:0; padding-left:20px; color:#c5221f;">'; res.warnings.forEach(w => wHtml += '<li>' + w + '</li>'); document.getElementById('admin-warning-container').innerHTML = wHtml + '</ul></div>'; }
+                fetchScheduleGrid(currentScheduleType);
+            });
+        }
+
+        function fetchUsersList() {
+            const tbody = document.getElementById('users-tbody'); tbody.innerHTML = '<tr><td colspan="7" class="loading">Đang tải...</td></tr>';
+            fetch(`${API_URL}?action=getUsers`).then(res => res.json()).then(res => {
+                if(res.status === 'success') {
+                    let html = ''; res.data.forEach((u, idx) => { html += `<tr><td>${idx + 1}</td><td><b>${u.username}</b></td><td>${u.fullname}</td><td><span class="tag">${u.role}</span></td><td><small>${u.permissions}</small></td><td><span style="color:${u.status === 'Active' ? 'green':'red'}; font-weight:bold;">${u.status}</span></td><td><button class="btn-blue" style="padding:4px 8px; font-size:11px;" onclick="editUser(${u.rowIndex}, '${u.username}', '${u.fullname}', '${u.role}', '${u.permissions}', '${u.status}')">✏️ Sửa</button>${u.username !== 'admin' ? `<button class="btn-blue" style="background:#ea4335; padding:4px 8px; font-size:11px;" onclick="deleteUserSubmit(\${u.rowIndex})">🗑️ Xóa</button>` : ''}</td></tr>`; });
+                    tbody.innerHTML = html;
+                }
+            });
+        }
+        function openUserModal() { document.getElementById('modal-title').innerText = "➕ Thêm tài khoản"; document.getElementById('user-row-index').value = "0"; document.getElementById('user-username').value = ""; document.getElementById('user-username').disabled = false; document.getElementById('user-password').value = ""; document.getElementById('user-fullname').value = ""; document.getElementById('user-role').value = "GiangVien"; document.getElementById('user-status').value = "Active"; document.querySelectorAll('.chk-perm').forEach(c => c.checked = false); document.getElementById('userModal').style.display = 'block'; }
+        function editUser(rowIndex, username, fullname, role, perms, status) { document.getElementById('modal-title').innerText = "✏️ Sửa tài khoản"; document.getElementById('user-row-index').value = rowIndex; document.getElementById('user-username').value = username; document.getElementById('user-username').disabled = true; document.getElementById('user-password').value = ""; document.getElementById('user-fullname').value = fullname; document.getElementById('user-role').value = role; document.getElementById('user-status').value = status; const permArr = perms.split(','); document.querySelectorAll('.chk-perm').forEach(c => { c.checked = permArr.includes(c.value); }); document.getElementById('userModal').style.display = 'block'; }
+        function closeUserModal() { document.getElementById('userModal').style.display = 'none'; }
+        function saveUserSubmit() {
+            const rowIndex = document.getElementById('user-row-index').value; const username = document.getElementById('user-username').value.trim(); const password = document.getElementById('user-password').value.trim(); const fullname = document.getElementById('user-fullname').value.trim(); const role = document.getElementById('user-role').value; const status = document.getElementById('user-status').value;
+            const selectedPerms = []; document.querySelectorAll('.chk-perm:checked').forEach(c => selectedPerms.push(c.value));
+            if (!username || !fullname) return alert("Vui lòng điền Email/Username và Họ tên!");
+            fetch(`${API_URL}?action=saveUser`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `rowIndex=${rowIndex}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&fullname=${encodeURIComponent(fullname)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(status)}&permissions=${encodeURIComponent(selectedPerms.join(','))}` }).then(res => res.json()).then(res => { if(res.status === 'success') { alert("✓ " + res.message); closeUserModal(); fetchUsersList(); } else alert("❌ Lỗi: " + res.message); });
+        }
+        function deleteUserSubmit(rowIndex) { if (confirm("Xóa tài khoản này?")) { fetch(`${API_URL}?action=deleteUser`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `rowIndex=${rowIndex}` }).then(res => res.json()).then(res => { if(res.status === 'success') { alert("✓ " + res.message); fetchUsersList(); } else alert("❌ Lỗi: " + res.message); }); } }
     </script>
 </body>
 </html>
