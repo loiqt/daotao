@@ -566,7 +566,6 @@
             });
         }
 
-        // --- KHU VỰC MODULE 2 JS (XẾP LỊCH & BẢNG THỐNG KÊ TÁCH BIỆT VHPT VS CN) ---
         function switchScheduleType(type) { 
             currentScheduleType = type; 
             document.getElementById('btn-sch-vhpt').classList.toggle('active', type === 'VHPT'); 
@@ -693,7 +692,6 @@
 
             let html = '<table class="table-sch"><tbody>';
 
-            // Tìm ngày đầu tiên trong TKB để tính số tuần dự phòng nếu chuỗi chưa chứa chữ Tuần X
             let firstDateObj = null;
             for (let r = 2; r < data.length; r++) {
                 let c0 = (data[r][0] || '').trim();
@@ -707,7 +705,6 @@
             for (let r = 0; r < data.length; r++) {
                 let row = data[r]; 
 
-                // NHẬN DIỆN HÀNG PHÂN CÁCH BLOCK 1 & BLOCK 2
                 if (row[0] && (row[0].indexOf('--- BẮT ĐẦU BLOCK 2 ---') > -1 || row[0].indexOf('=== BẮT ĐẦU BLOCK 2 ===') > -1)) {
                     html += `<tr style="background:#28a745; color:white; font-weight:bold; text-align:center;"><td colspan="${row.length}" style="padding:10px; font-size:14px; background:#28a745; color:white; border:none;">🚩 KẾT THÚC BLOCK 1 — BẮT ĐẦU BLOCK 2 🚩</td></tr>`;
                     continue;
@@ -718,7 +715,6 @@
                     let cellVal = (row[c] || '').trim();
                     if (r === 0) {
                         if (c === 0) {
-                            // Ô GÓC TRÊN BÊN TRÁI CỐ ĐỊNH TỰ ĐỘNG CHUYỂN TUẦN KHI CUỘN
                             html += `<th id="sticky-week-label" style="position:sticky; top:0; left:0; background:#f8f9fa; z-index:30; font-weight:bold; font-size:13px; color:#1a73e8; border-right:2px solid #dadce0;">Tuần 1</th>`;
                         } else if (cellVal.includes('Lớp')) {
                             html += `<th style="position:sticky; top:0; background:white; z-index:20;">${cellVal}</th>`; 
@@ -733,7 +729,6 @@
                     } else {
                         if (c === 0) { 
                             if (cellVal !== '') {
-                                // TÍNH ROWSPAN ĐỘNG CHO MỖI NGÀY
                                 let dayRowSpan = 1;
                                 for (let nextR = r + 1; nextR < data.length; nextR++) {
                                     let nextVal = (data[nextR][0] || '').trim();
@@ -741,7 +736,6 @@
                                     dayRowSpan++;
                                 }
 
-                                // BỘ TỰ ĐỘNG BẮT VÀ THÊM CHỮ "TUẦN X" CHO CẢ VHPT VÀ CN
                                 let weekMatch = cellVal.match(/Tuần\s*(\d+)/i);
                                 let weekStr = '';
                                 let displayVal = cellVal;
@@ -758,7 +752,6 @@
                                     }
                                     if (!weekStr) weekStr = 'Tuần 1';
 
-                                    // TỰ ĐỘNG BỔ SUNG CHỮ "TUẦN X" LÊN ĐẦU DÒNG NẾU Ô DỮ LIỆU CHƯA CÓ
                                     displayVal = weekStr + '\n' + cellVal;
                                 }
 
@@ -785,15 +778,12 @@
             } 
             container.innerHTML = html + '</tbody></table>';
 
-            // KÍCH HOẠT BỘ LẮNG NGHE CUỘN CHO BẢNG CẢ VHPT VÀ CN
             setupWeekScrollObserver();
         }
 
-        // HÀM THEO DÕI VỊ TRÍ CUỘN VÀ CẬP NHẬT TỰ ĐỘNG SỐ TUẦN
         function setupWeekScrollObserver() {
             const container = document.getElementById('sch-grid-container');
             if (!container) return;
-
             container.removeEventListener('scroll', handleGridScroll);
             container.addEventListener('scroll', handleGridScroll);
         }
@@ -802,10 +792,8 @@
             const container = document.getElementById('sch-grid-container');
             const stickyLabel = document.getElementById('sticky-week-label');
             if (!container || !stickyLabel) return;
-
             const dayCells = container.querySelectorAll('.day-header-cell');
             const containerRect = container.getBoundingClientRect();
-
             let activeWeek = '';
             for (let cell of dayCells) {
                 const cellRect = cell.getBoundingClientRect();
@@ -815,7 +803,6 @@
                     break;
                 }
             }
-
             if (activeWeek && stickyLabel.innerText !== activeWeek) {
                 stickyLabel.innerText = activeWeek;
             }
@@ -833,109 +820,153 @@
             fetch(`${API_URL}?action=saveFullGrid`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: JSON.stringify({ type: currentScheduleType, data: currentRawData }) }).then(res => res.json()).then(res => { alert(res.message); fetchScheduleGrid(currentScheduleType); });
         }
 
+        // =========================================================================
+        // CHỨC NĂNG XUẤT EXCEL CHUẨN DANH SÁCH PHẲNG (7 CỘT) ĐÚNG MẪU
+        // =========================================================================
         function exportScheduleXLSX() {
             try {
-                if (!currentRawData || currentRawData.length < 3) {
-                    alert("Chưa có dữ liệu lịch để Export! Vui lòng tạo hoặc nạp lịch trước.");
+                if (!currentRawData || currentRawData.length < 2) {
+                    alert("Chưa có dữ liệu lịch để Export! Vui lòng nạp hoặc xếp lịch trước.");
                     return;
                 }
-                
-                let classCols = {};
-                let headerRow = currentRawData[0];
-                let roomRow = currentRawData[1];
-                
-                for (let c = 2; c < headerRow.length; c++) {
-                    let cellVal = (headerRow[c] || '').trim();
-                    let upper = cellVal.toUpperCase();
-                    if (cellVal && !upper.includes('TUẦN') && !upper.includes('LỚP') && upper !== 'PHÒNG HỌC' && upper !== 'SÁNG' && upper !== 'CHIỀU') {
-                        classCols[c] = { className: cellVal, room: (roomRow[c] || '').trim() };
+
+                const isCN = (currentScheduleType === 'CN');
+                const fileName = isCN ? 'Lich_Hoc_Chuyen_Nganh.xlsx' : 'Lich_Hoc_VHPT.xlsx';
+                const sheetTitle = isCN ? 'Lịch Chuyên Ngành' : 'Lịch VHPT';
+
+                // 1. Xác định cột chứa Lớp và Phòng từ 2 dòng tiêu đề đầu tiên
+                const classCols = [];
+                const numCols = currentRawData[0].length;
+                for (let c = 2; c < numCols; c++) {
+                    let className = (currentRawData[0][c] || '').toString().trim();
+                    let upper = className.toUpperCase();
+                    if (className && !upper.includes('TUẦN') && !upper.includes('LỚP') && upper !== 'PHÒNG HỌC' && upper !== 'SÁNG' && upper !== 'CHIỀU') {
+                        let room = (currentRawData[1] && currentRawData[1][c]) ? currentRawData[1][c].toString().trim() : '';
+                        classCols.push({ colIndex: c, className: className, room: room });
                     }
                 }
-                
-                let flatData = [];
-                let currentDate = "";
-                let subjectCounters = {};
-                
+
+                if (classCols.length === 0) {
+                    alert("Không tìm thấy thông tin Lớp học trên lưới TKB!");
+                    return;
+                }
+
+                // 2. Trích xuất dữ liệu thành danh sách phẳng (Flat list)
+                const rawRecords = [];
+                let currentDateStr = '';
+                let currentDateObj = null;
+
                 for (let r = 2; r < currentRawData.length; r++) {
-                    let row = currentRawData[r];
-                    let col0 = (row[0] || '').trim();
-                    if (col0) {
-                        let parts = col0.split('\n');
-                        currentDate = parts[parts.length - 1].trim(); 
+                    const row = currentRawData[r];
+                    if (!row || row.length === 0) continue;
+
+                    let c0 = (row[0] || '').toString().trim();
+                    if (c0.includes('BẮT ĐẦU BLOCK')) continue;
+
+                    // Nếu ô cột A chứa thông tin Ngày tháng thì cập nhật
+                    if (c0 !== '') {
+                        const dateMatch = c0.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                        if (dateMatch) {
+                            let d = parseInt(dateMatch[1], 10);
+                            let m = parseInt(dateMatch[2], 10);
+                            let y = parseInt(dateMatch[3], 10);
+                            currentDateStr = `${d < 10 ? '0'+d : d}/${m < 10 ? '0'+m : m}/${y}`;
+                            currentDateObj = new Date(y, m - 1, d);
+                        }
                     }
-                    
-                    let col1 = (row[1] || '').trim();
-                    if (!col1 || (!col1.startsWith('Tiết') && !col1.startsWith('Ca'))) continue;
-                    
-                    let lessonNum = parseInt(col1.replace('Tiết ', '').replace('Ca ', '').trim()) || 1;
-                    
-                    for (let c in classCols) {
-                        let cellContent = (row[c] || '').trim();
-                        if (cellContent && cellContent.includes('\n')) {
-                            let lines = cellContent.split('\n');
-                            let maMon = lines[0].trim().toUpperCase();
-                            let giangVien = lines[1] ? lines[1].trim() : '';
-                            let info = classCols[c];
+
+                    // Tách số Ca/Tiết học ở cột B (VD: "Tiết 1" -> 1)
+                    let c1 = (row[1] || '').toString().trim();
+                    let slotNum = 0;
+                    const slotMatch = c1.match(/\d+/);
+                    if (slotMatch) slotNum = parseInt(slotMatch[0], 10);
+
+                    // Nếu dòng này không hợp lệ hoặc thiếu ngày/tiết thì bỏ qua
+                    if (!currentDateStr || slotNum === 0) continue;
+
+                    // Duyệt qua tất cả các cột lớp học để gom dữ liệu
+                    for (let i = 0; i < classCols.length; i++) {
+                        const colInfo = classCols[i];
+                        let cellVal = (row[colInfo.colIndex] || '').toString().trim();
+
+                        if (cellVal !== '') {
+                            let maMon = '', giangVien = '';
                             
-                            let counterKey = info.className + "_" + maMon;
-                            if (!subjectCounters[counterKey]) {
-                                subjectCounters[counterKey] = 0;
+                            if (cellVal.includes('\n')) {
+                                const parts = cellVal.split('\n');
+                                maMon = parts[0].trim();
+                                giangVien = parts[1] ? parts[1].trim() : '';
+                            } else {
+                                maMon = cellVal;
                             }
-                            subjectCounters[counterKey]++;
-                            let currentSessionIndex = subjectCounters[counterKey];
-                            
-                            flatData.push({
-                                "Ngày": currentDate,
-                                "Ca/Tiết học": lessonNum,
-                                "Tên phòng": info.room,
-                                "Giảng viên": giangVien,
-                                "Mã môn": maMon,
-                                "Buổi học": currentSessionIndex,
-                                "Tên lớp": info.className
+
+                            rawRecords.push({
+                                dateStr: currentDateStr,
+                                dateObj: currentDateObj,
+                                slot: slotNum,
+                                room: colInfo.room,
+                                giangVien: giangVien,
+                                maMon: maMon,
+                                className: colInfo.className
                             });
                         }
                     }
                 }
-                
-                if (flatData.length === 0) {
-                    alert("Không tìm thấy tiết học nào trong bảng dữ liệu hiện tại!");
-                    return;
+
+                // 3. Sắp xếp danh sách ưu tiên theo: Tên Lớp -> Mã môn -> Ngày học -> Tiết học
+                rawRecords.sort((a, b) => {
+                    if (a.className !== b.className) return a.className.localeCompare(b.className);
+                    if (a.maMon !== b.maMon) return a.maMon.localeCompare(b.maMon);
+                    if (a.dateObj && b.dateObj && a.dateObj.getTime() !== b.dateObj.getTime()) {
+                        return a.dateObj.getTime() - b.dateObj.getTime();
+                    }
+                    return a.slot - b.slot;
+                });
+
+                // 4. Tạo bộ đếm lũy tiến "Buổi học" dựa theo cặp (Tên Lớp_Mã Môn)
+                const sessionCounters = {};
+                const finalRows = [
+                    ["Ngày", "Ca/Tiết học", "Tên phòng", "Giảng viên", "Mã môn", "Buổi học", "Tên lớp"]
+                ];
+
+                for (let i = 0; i < rawRecords.length; i++) {
+                    const rec = rawRecords[i];
+                    const key = rec.className + "_" + rec.maMon;
+                    
+                    if (!sessionCounters[key]) sessionCounters[key] = 0;
+                    sessionCounters[key]++;
+
+                    finalRows.push([
+                        rec.dateStr,
+                        rec.slot,
+                        rec.room,
+                        rec.giangVien,
+                        rec.maMon,
+                        sessionCounters[key],
+                        rec.className
+                    ]);
                 }
-                
-                flatData.sort((a, b) => {
-                    if (a["Tên lớp"] !== b["Tên lớp"]) return a["Tên lớp"].localeCompare(b["Tên lớp"]);
-                    if (a["Mã môn"] !== b["Mã môn"]) return a["Mã môn"].localeCompare(b["Mã môn"]);
-                    let dateA = a["Ngày"].split('/').reverse().join('');
-                    let dateB = b["Ngày"].split('/').reverse().join('');
-                    if (dateA !== dateB) return dateA.localeCompare(dateB);
-                    return a["Ca/Tiết học"] - b["Ca/Tiết học"];
-                });
-                
-                let csvContent = "\uFEFFNgày,Ca/Tiết học,Tên phòng,Giảng viên,Mã môn,Buổi học,Tên lớp\r\n";
-                flatData.forEach(item => {
-                    let row = [
-                        `"${item["Ngày"]}"`,
-                        item["Ca/Tiết học"],
-                        `"${item["Tên phòng"]}"`,
-                        `"${item["Giảng viên"]}"`,
-                        `"${item["Mã môn"]}"`,
-                        item["Buổi học"],
-                        `"${item["Tên lớp"]}"`
-                    ].join(",");
-                    csvContent += row + "\r\n";
-                });
-                
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.setAttribute("href", url);
-                link.setAttribute("download", `ThoiKhoaBieu_${currentScheduleType}_${new Date().toISOString().slice(0,10)}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
+
+                // 5. Build và Xuất file bằng SheetJS
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(finalRows);
+
+                // Định dạng độ rộng cột (Width) cho dễ nhìn
+                ws['!cols'] = [
+                    { wch: 14 }, // Ngày
+                    { wch: 12 }, // Ca/Tiết học
+                    { wch: 12 }, // Tên phòng
+                    { wch: 16 }, // Giảng viên
+                    { wch: 12 }, // Mã môn
+                    { wch: 10 }, // Buổi học
+                    { wch: 15 }  // Tên lớp
+                ];
+
+                XLSX.utils.book_append_sheet(wb, ws, sheetTitle);
+                XLSX.writeFile(wb, fileName);
+
             } catch (err) {
-                alert("Lỗi khi xuất file: " + err.message);
+                alert("Lỗi khi xuất file Excel (.xlsx): " + err.message);
                 console.error(err);
             }
         }
