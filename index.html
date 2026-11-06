@@ -143,7 +143,11 @@
                     <button class="dash-card" style="background: #28a745;" onclick="openScheduleApp()">🗓️ Xếp lịch học (VHPT & CN) →</button>
                     <button class="btn-delete-card" onclick="deleteCard('card-schedule')" title="Xóa thẻ này">✕</button>
                 </div>
-                
+                <!-- 🚀 THÊM THẺ NHẮC ĐIỂM DANH CỐ ĐỊNH TẠI ĐÂY -->
+        <div class="dash-card-wrapper" id="card-nhac-diem-danh">
+            <button class="dash-card" style="background: #673ab7;" onclick="window.open('he-thong-nhac-diem-danh.html', '_blank')">⏰ Nhắc điểm danh giảng viên →</button>
+            <button class="btn-delete-card" onclick="deleteCard('card-nhac-diem-danh')" title="Xóa thẻ này">✕</button>
+        </div>
                 <div class="dash-card-wrapper" id="card-add-new">
                     <button class="dash-card add-new" onclick="createNewModule()">➕ Mở thẻ tiện ích mới</button>
                 </div>
@@ -371,7 +375,11 @@
 
             document.getElementById('btn-header-users').style.display = hasPerm('usermgmt') ? 'inline-block' : 'none';
             document.getElementById('card-schedule').style.display = hasPerm('xeplich') ? 'inline-block' : 'none';
-            
+            // 🚀 BỔ SUNG: Ẩn thẻ Nhắc điểm danh đối với tài khoản Giảng viên
+    const cardNhacDiemDanh = document.getElementById('card-nhac-diem-danh');
+    if (cardNhacDiemDanh) {
+        cardNhacDiemDanh.style.display = (currentUser.role === 'GiangVien') ? 'none' : 'inline-block';
+    }
             document.getElementById('btn-tab-doisoat').style.display = hasPerm('doisoat') ? 'inline-block' : 'none';
             document.getElementById('btn-tab-dulieu').style.display = hasPerm('dulieu') ? 'inline-block' : 'none';
             document.getElementById('btn-tab-drive').style.display = hasPerm('drive') ? 'inline-block' : 'none';
@@ -400,14 +408,21 @@
         }
 
         function openApp() { 
-            hideAllViews();
-            document.getElementById('app-view').style.display = 'block'; 
-            if (hasPerm('doisoat')) switchTabDirect('tab-doisoat', 'btn-tab-doisoat');
-            else if (hasPerm('dulieu')) switchTabDirect('tab-dulieu', 'btn-tab-dulieu');
-            else if (hasPerm('drive')) switchTabDirect('tab-drive', 'btn-tab-drive');
-            loadServerConfig(() => { if (hasPerm('dulieu')) fetchSheetData(false); });
-            if(!autoSyncTimer) autoSyncTimer = setInterval(() => { if (document.getElementById('tab-dulieu').classList.contains('active') && hasPerm('dulieu')) fetchSheetData(true); }, 1500);
-        }
+    hideAllViews();
+    document.getElementById('app-view').style.display = 'block'; 
+    if (hasPerm('doisoat')) switchTabDirect('tab-doisoat', 'btn-tab-doisoat');
+    else if (hasPerm('dulieu')) switchTabDirect('tab-dulieu', 'btn-tab-dulieu');
+    else if (hasPerm('drive')) switchTabDirect('tab-drive', 'btn-tab-drive');
+    
+    // 🚀 SỬA ĐỔI: Tải dữ liệu LMS ngầm khi vào màn hình đối soát để nạp danh sách vào Select Box
+    loadServerConfig(() => { 
+        if (hasPerm('doisoat') || hasPerm('dulieu')) fetchSheetData(false); 
+    });
+    
+    if(!autoSyncTimer) autoSyncTimer = setInterval(() => { 
+        if (document.getElementById('tab-dulieu').classList.contains('active') && hasPerm('dulieu')) fetchSheetData(true); 
+    }, 1500);
+}
 
         function openScheduleApp() {
             hideAllViews();
