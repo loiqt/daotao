@@ -144,10 +144,10 @@
                     <button class="btn-delete-card" onclick="deleteCard('card-schedule')" title="Xóa thẻ này">✕</button>
                 </div>
                 <!-- 🚀 THÊM THẺ NHẮC ĐIỂM DANH CỐ ĐỊNH TẠI ĐÂY -->
-        <div class="dash-card-wrapper" id="card-nhac-diem-danh">
-            <button class="dash-card" style="background: #673ab7;" onclick="window.open('he-thong-nhac-diem-danh.html', '_blank')">⏰ Nhắc điểm danh giảng viên →</button>
-            <button class="btn-delete-card" onclick="deleteCard('card-nhac-diem-danh')" title="Xóa thẻ này">✕</button>
-        </div>
+                <div class="dash-card-wrapper" id="card-nhac-diem-danh">
+                    <button class="dash-card" style="background: #673ab7;" onclick="window.open('he-thong-nhac-diem-danh.html', '_blank')">⏰ Nhắc điểm danh giảng viên →</button>
+                    <button class="btn-delete-card" onclick="deleteCard('card-nhac-diem-danh')" title="Xóa thẻ này">✕</button>
+                </div>
                 <div class="dash-card-wrapper" id="card-add-new">
                     <button class="dash-card add-new" onclick="createNewModule()">➕ Mở thẻ tiện ích mới</button>
                 </div>
@@ -376,10 +376,10 @@
             document.getElementById('btn-header-users').style.display = hasPerm('usermgmt') ? 'inline-block' : 'none';
             document.getElementById('card-schedule').style.display = hasPerm('xeplich') ? 'inline-block' : 'none';
             // 🚀 BỔ SUNG: Ẩn thẻ Nhắc điểm danh đối với tài khoản Giảng viên
-    const cardNhacDiemDanh = document.getElementById('card-nhac-diem-danh');
-    if (cardNhacDiemDanh) {
-        cardNhacDiemDanh.style.display = (currentUser.role === 'GiangVien') ? 'none' : 'inline-block';
-    }
+            const cardNhacDiemDanh = document.getElementById('card-nhac-diem-danh');
+            if (cardNhacDiemDanh) {
+                cardNhacDiemDanh.style.display = (currentUser.role === 'GiangVien') ? 'none' : 'inline-block';
+            }
             document.getElementById('btn-tab-doisoat').style.display = hasPerm('doisoat') ? 'inline-block' : 'none';
             document.getElementById('btn-tab-dulieu').style.display = hasPerm('dulieu') ? 'inline-block' : 'none';
             document.getElementById('btn-tab-drive').style.display = hasPerm('drive') ? 'inline-block' : 'none';
@@ -408,21 +408,21 @@
         }
 
         function openApp() { 
-    hideAllViews();
-    document.getElementById('app-view').style.display = 'block'; 
-    if (hasPerm('doisoat')) switchTabDirect('tab-doisoat', 'btn-tab-doisoat');
-    else if (hasPerm('dulieu')) switchTabDirect('tab-dulieu', 'btn-tab-dulieu');
-    else if (hasPerm('drive')) switchTabDirect('tab-drive', 'btn-tab-drive');
-    
-    // 🚀 SỬA ĐỔI: Tải dữ liệu LMS ngầm khi vào màn hình đối soát để nạp danh sách vào Select Box
-    loadServerConfig(() => { 
-        if (hasPerm('doisoat') || hasPerm('dulieu')) fetchSheetData(false); 
-    });
-    
-    if(!autoSyncTimer) autoSyncTimer = setInterval(() => { 
-        if (document.getElementById('tab-dulieu').classList.contains('active') && hasPerm('dulieu')) fetchSheetData(true); 
-    }, 1500);
-}
+            hideAllViews();
+            document.getElementById('app-view').style.display = 'block'; 
+            if (hasPerm('doisoat')) switchTabDirect('tab-doisoat', 'btn-tab-doisoat');
+            else if (hasPerm('dulieu')) switchTabDirect('tab-dulieu', 'btn-tab-dulieu');
+            else if (hasPerm('drive')) switchTabDirect('tab-drive', 'btn-tab-drive');
+            
+            // 🚀 SỬA ĐỔI: Tải dữ liệu LMS ngầm khi vào màn hình đối soát để nạp danh sách vào Select Box
+            loadServerConfig(() => { 
+                if (hasPerm('doisoat') || hasPerm('dulieu')) fetchSheetData(false); 
+            });
+            
+            if(!autoSyncTimer) autoSyncTimer = setInterval(() => { 
+                if (document.getElementById('tab-dulieu').classList.contains('active') && hasPerm('dulieu')) fetchSheetData(true); 
+            }, 1500);
+        }
 
         function openScheduleApp() {
             hideAllViews();
@@ -532,6 +532,22 @@
                 }).catch(err => { container.innerHTML = `<div class="loading" style="color:red;">❌ Lỗi kết nối: ${err.message}</div>`; });
         }
 
+        // 🔄 Hàm hỗ trợ tách chuỗi từ Google Sheet (dạng "Lab 1: test\nLab 2: test") thành Map key-value
+        function parseNoteToMap(noteStr) {
+            const map = {};
+            if (!noteStr) return map;
+            const lines = noteStr.toString().split('\n');
+            lines.forEach(line => {
+                const colonIdx = line.indexOf(':');
+                if (colonIdx > -1) {
+                    const head = line.substring(0, colonIdx).trim();
+                    const val = line.substring(colonIdx + 1).trim();
+                    map[head] = val;
+                }
+            });
+            return map;
+        }
+
         function renderResult(data) {
             document.getElementById('stat-lech').innerText = data.totalDiff; 
             document.getElementById('stat-giaitrinh').innerText = `${data.resolved} / ${data.totalDiff}`;
@@ -586,17 +602,29 @@
 
             html += `<h4 style="color:#1e2b3c; margin-bottom:15px;">🔍 CHI TIẾT ĐỐI SOÁT & NHẬP GIẢI TRÌNH TỪNG LỚP</h4>`;
 
-            // 🔍 2. DANH SÁCH CHI TIẾT CÁC LỚP & KHU VỰC NHẬP GIẢI TRÌNH (TẤT CẢ TÀI KHOẢN ĐỀU XEM ĐƯỢC)
+            // 🔍 2. DANH SÁCH CHI TIẾT CÁC LỚP - TÁCH RIÊNG Ô GIẢI TRÌNH CHO TỪNG ĐẦU ĐIỂM
             data.classes.forEach(cls => {
                 let tableRows = '';
+                const noteMap = parseNoteToMap(cls.currentNote);
+
                 cls.details.forEach(item => { 
                     if (item.isDiff) {
+                        const currentVal = noteMap[item.dauDiem] || '';
+
                         tableRows += `
                             <tr style="background-color: #fffcf0;">
                                 <td style="text-align:left; font-weight:bold;">${item.dauDiem}</td>
                                 <td style="color:#d93025; font-weight:bold;">${item.excelDrive} SV</td>
                                 <td style="color:#1e8e3e; font-weight:bold;">${item.googleSheet} SV</td>
                                 <td><span class="badge-warn">Chênh lệch</span></td>
+                                <td style="padding: 5px 10px;">
+                                    <input type="text" 
+                                           class="gt-input-${cls.rowIndex}" 
+                                           data-daudiem="${item.dauDiem}" 
+                                           value="${currentVal}" 
+                                           placeholder="Nhập lý do chênh lệch..." 
+                                           style="width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 13px;">
+                                </td>
                             </tr>`; 
                     }
                 });
@@ -612,14 +640,13 @@
                                         <th>Excel Drive</th>
                                         <th>Google Sheet (LMS)</th>
                                         <th>Đánh giá</th>
+                                        <th style="text-align:left; width: 35%;">Giải trình</th>
                                     </tr>
                                 </thead>
                                 <tbody>${tableRows}</tbody>
                             </table>
-                            <div class="note-area">
-                                <span style="font-weight:bold; color:#1e8e3e; font-size:13px;">Giải trình:</span>
-                                <input type="text" id="note-input-${cls.rowIndex}" value="${cls.currentNote}" placeholder="Nhập lý do chênh lệch...">
-                                <button class="btn-blue" style="background:#1e2b3c;" onclick="saveNote(${cls.rowIndex}, this)">💾 Lưu</button>
+                            <div style="display: flex; justify-content: flex-end; padding: 10px 15px; background: #f8f9fa;">
+                                <button class="btn-blue" style="background:#1e2b3c;" onclick="saveClassNotes(${cls.rowIndex}, this)">💾 Lưu giải trình</button>
                             </div>
                         </div>`;
                 }
@@ -628,10 +655,49 @@
             container.innerHTML = html;
         }
 
-        function saveNote(rowIndex, btnElement) {
-            const noteContent = document.getElementById('note-input-' + rowIndex).value.trim(); btnElement.innerText = "⏳..."; btnElement.disabled = true;
-            fetch(`${API_URL}?action=saveNote`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `rowIndex=${rowIndex}&note=${encodeURIComponent(noteContent)}` }).then(res => res.json()).then(result => {
-                if(result.status === 'success') { btnElement.innerText = "✓"; btnElement.style.background = "var(--success)"; } else { alert("Lỗi: " + result.message); btnElement.innerText = "💾 Lưu"; btnElement.disabled = false; }
+        // 💾 Gom nội dung giải trình của từng đầu điểm và ghi xuống hàng trong 1 ô trên Google Sheet
+        function saveClassNotes(rowIndex, btnElement) {
+            const inputs = document.querySelectorAll(`.gt-input-${rowIndex}`);
+            const noteLines = [];
+            
+            inputs.forEach(input => {
+                const dd = input.getAttribute('data-daudiem');
+                const val = input.value.trim();
+                if (val) {
+                    noteLines.push(`${dd}: ${val}`);
+                }
+            });
+
+            const fullNoteStr = noteLines.join('\n');
+            
+            btnElement.innerText = "⏳..."; 
+            btnElement.disabled = true;
+
+            fetch(`${API_URL}?action=saveNote`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+                body: `rowIndex=${rowIndex}&note=${encodeURIComponent(fullNoteStr)}` 
+            })
+            .then(res => res.json())
+            .then(result => {
+                if(result.status === 'success') { 
+                    btnElement.innerText = "✓ Đã lưu"; 
+                    btnElement.style.background = "var(--success)"; 
+                    setTimeout(() => {
+                        btnElement.innerText = "💾 Lưu giải trình";
+                        btnElement.style.background = "#1e2b3c";
+                        btnElement.disabled = false;
+                    }, 2000);
+                } else { 
+                    alert("Lỗi: " + result.message); 
+                    btnElement.innerText = "💾 Lưu giải trình"; 
+                    btnElement.disabled = false; 
+                }
+            })
+            .catch(err => {
+                alert("Lỗi kết nối: " + err.message);
+                btnElement.innerText = "💾 Lưu giải trình"; 
+                btnElement.disabled = false; 
             });
         }
 
@@ -1113,7 +1179,7 @@
             const tbody = document.getElementById('users-tbody'); tbody.innerHTML = '<tr><td colspan="7" class="loading">Đang tải...</td></tr>';
             fetch(`${API_URL}?action=getUsers`).then(res => res.json()).then(res => {
                 if(res.status === 'success') {
-                    let html = ''; res.data.forEach((u, idx) => { html += `<tr><td>${idx + 1}</td><td><b>${u.username}</b></td><td>${u.fullname}</td><td><span class="tag">${u.role}</span></td><td><small>${u.permissions}</small></td><td><span style="color:${u.status === 'Active' ? 'green':'red'}; font-weight:bold;">${u.status}</span></td><td><button class="btn-blue" style="padding:4px 8px; font-size:11px;" onclick="editUser(${u.rowIndex}, '${u.username}', '${u.fullname}', '${u.role}', '${u.permissions}', '${u.status}')">✏️ Sửa</button>${u.username !== 'admin' ? `<button class="btn-blue" style="background:#ea4335; padding:4px 8px; font-size:11px;" onclick="deleteUserSubmit(\${u.rowIndex})">🗑️ Xóa</button>` : ''}</td></tr>`; });
+                    let html = ''; res.data.forEach((u, idx) => { html += `<tr><td>${idx + 1}</td><td><b>${u.username}</b></td><td>${u.fullname}</td><td><span class="tag">${u.role}</span></td><td><small>${u.permissions}</small></td><td><span style="color:${u.status === 'Active' ? 'green':'red'}; font-weight:bold;">${u.status}</span></td><td><button class="btn-blue" style="padding:4px 8px; font-size:11px;" onclick="editUser(${u.rowIndex}, '${u.username}', '${u.fullname}', '${u.role}', '${u.permissions}', '${u.status}')">✏️ Sửa</button>${u.username !== 'admin' ? `<button class="btn-blue" style="background:#ea4335; padding:4px 8px; font-size:11px;" onclick="deleteUserSubmit(${u.rowIndex})">🗑️ Xóa</button>` : ''}</td></tr>`; });
                     tbody.innerHTML = html;
                 }
             });
