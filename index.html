@@ -533,15 +533,98 @@
         }
 
         function renderResult(data) {
-            document.getElementById('stat-lech').innerText = data.totalDiff; document.getElementById('stat-giaitrinh').innerText = `${data.resolved} / ${data.totalDiff}`;
+            document.getElementById('stat-lech').innerText = data.totalDiff; 
+            document.getElementById('stat-giaitrinh').innerText = `${data.resolved} / ${data.totalDiff}`;
             const container = document.getElementById('result-container');
-            if(data.classes.length === 0) return container.innerHTML = '<div class="loading" style="color:#1e8e3e; font-weight:bold;">✅ Không có lớp nào bị chênh lệch điểm!</div>';
+            
+            if(data.classes.length === 0) {
+                return container.innerHTML = '<div class="loading" style="color:#1e8e3e; font-weight:bold;">✅ Không có lớp nào bị chênh lệch điểm!</div>';
+            }
+            
+            // 🔒 Kiểm tra quyền Admin
+            const isAdmin = currentUser && currentUser.role === 'Admin';
             let html = '';
+
+            // 📋 1. BẢNG TỔNG HỢP GỌN (CHỈ HIỂN THỊ KHI LÀ ADMIN)
+            if (isAdmin) {
+                let summaryRows = '';
+                data.classes.forEach((cls, idx) => {
+                    let diffItems = cls.details.filter(item => item.isDiff).map(item => item.dauDiem).join(', ');
+                    summaryRows += `
+                        <tr>
+                            <td style="text-align:center;">${idx + 1}</td>
+                            <td style="font-weight:bold; color:#1a73e8; text-align:center;">${cls.lop}</td>
+                            <td style="text-align:left;">${cls.monHoc}</td>
+                            <td style="font-weight:bold; text-align:left;">${cls.giangVien}</td>
+                            <td style="color:#d93025; font-weight:bold; text-align:left;">${diffItems}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                    <div style="background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <h4 style="margin-top:0; color:#1e2b3c;">📋 BẢNG TỔNG HỢP DỮ LIỆU CHÊNH LỆCH (BÁO CÁO ADMIN)</h4>
+                        <div class="table-responsive" style="margin-top:10px;">
+                            <table class="table-full" style="width:100%;">
+                                <thead>
+                                    <tr style="background-color: #f8f9fa;">
+                                        <th style="width: 50px;">STT</th>
+                                        <th>Lớp</th>
+                                        <th>Môn học</th>
+                                        <th>Giảng viên phụ trách</th>
+                                        <th>Đầu điểm lệch</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${summaryRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `<h4 style="color:#1e2b3c; margin-bottom:15px;">🔍 CHI TIẾT ĐỐI SOÁT & NHẬP GIẢI TRÌNH TỪNG LỚP</h4>`;
+
+            // 🔍 2. DANH SÁCH CHI TIẾT CÁC LỚP & KHU VỰC NHẬP GIẢI TRÌNH (TẤT CẢ TÀI KHOẢN ĐỀU XEM ĐƯỢC)
             data.classes.forEach(cls => {
                 let tableRows = '';
-                cls.details.forEach(item => { if (item.isDiff) tableRows += `<tr style="background-color: #fffcf0;"><td style="text-align:left; font-weight:bold;">${item.dauDiem}</td><td style="color:#d93025; font-weight:bold;">${item.excelDrive} SV</td><td style="color:#1e8e3e; font-weight:bold;">${item.googleSheet} SV</td><td><span class="badge-warn">Chênh lệch</span></td></tr>`; });
-                if(tableRows !== '') html += `<div class="result-box"><div class="result-header">🏢 LỚP: ${cls.lop} &nbsp;|&nbsp; 📚 MÔN: ${cls.monHoc} &nbsp;|&nbsp; 👨‍🏫 GV: ${cls.giangVien}</div><table class="table-ds"><thead><tr><th style="text-align:left;">Đầu điểm bị lệch</th><th>Excel Drive</th><th>Google Sheet (LMS)</th><th>Đánh giá</th></tr></thead><tbody>${tableRows}</tbody></table><div class="note-area"><span style="font-weight:bold; color:#1e8e3e; font-size:13px;">Giải trình:</span><input type="text" id="note-input-${cls.rowIndex}" value="${cls.currentNote}" placeholder="Nhập lý do..."><button class="btn-blue" style="background:#1e2b3c;" onclick="saveNote(${cls.rowIndex}, this)">💾 Lưu</button></div></div>`;
+                cls.details.forEach(item => { 
+                    if (item.isDiff) {
+                        tableRows += `
+                            <tr style="background-color: #fffcf0;">
+                                <td style="text-align:left; font-weight:bold;">${item.dauDiem}</td>
+                                <td style="color:#d93025; font-weight:bold;">${item.excelDrive} SV</td>
+                                <td style="color:#1e8e3e; font-weight:bold;">${item.googleSheet} SV</td>
+                                <td><span class="badge-warn">Chênh lệch</span></td>
+                            </tr>`; 
+                    }
+                });
+                
+                if(tableRows !== '') {
+                    html += `
+                        <div class="result-box">
+                            <div class="result-header">🏢 LỚP: ${cls.lop} &nbsp;|&nbsp; 📚 MÔN: ${cls.monHoc} &nbsp;|&nbsp; 👨‍🏫 GV: ${cls.giangVien}</div>
+                            <table class="table-ds">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:left;">Đầu điểm bị lệch</th>
+                                        <th>Excel Drive</th>
+                                        <th>Google Sheet (LMS)</th>
+                                        <th>Đánh giá</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${tableRows}</tbody>
+                            </table>
+                            <div class="note-area">
+                                <span style="font-weight:bold; color:#1e8e3e; font-size:13px;">Giải trình:</span>
+                                <input type="text" id="note-input-${cls.rowIndex}" value="${cls.currentNote}" placeholder="Nhập lý do chênh lệch...">
+                                <button class="btn-blue" style="background:#1e2b3c;" onclick="saveNote(${cls.rowIndex}, this)">💾 Lưu</button>
+                            </div>
+                        </div>`;
+                }
             });
+
             container.innerHTML = html;
         }
 
